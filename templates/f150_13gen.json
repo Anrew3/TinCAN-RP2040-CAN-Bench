@@ -1,0 +1,133 @@
+{
+  "$schema": "./schema.json",
+  "name": "Ford F-150 13th Gen",
+  "id": "f150_13gen",
+  "version": "1.0.0",
+  "author": "TinCAN Community",
+  "description": "CAN bus template for Ford F-150 13th generation (2015-2020). Includes support for instrument cluster, steering wheel controls, TPMS, and turn signals.",
+
+  "vehicle": {
+    "make": "Ford",
+    "model": "F-150",
+    "years": "2015-2020",
+    "platform": "P552"
+  },
+
+  "buttons": {
+    "canId": "0x81",
+    "holdMs": 100,
+    "intervalMs": 10,
+    "default": "00 00 00 00 00 00 00 00",
+    "commands": {
+      "UP": "08 00 00 00 00 00 00 00",
+      "DOWN": "01 00 00 00 00 00 00 00",
+      "LEFT": "02 00 00 00 00 00 00 00",
+      "RIGHT": "04 00 00 00 00 00 00 00",
+      "OK": "10 00 00 00 00 00 00 00",
+      "SETTINGS": "46 01 00 00 00 00 00 00"
+    }
+  },
+
+  "gauges": {
+    "RPM": {
+      "canId": "0x204",
+      "base": "00 00 00 00 00 00 00 00",
+      "valueBytes": [3, 4],
+      "scale": 0.5,
+      "offset": 0,
+      "min": 0,
+      "max": 7000,
+      "unit": "rpm",
+      "intervalMs": 100
+    },
+    "SPEED": {
+      "canId": "0x202",
+      "base": "00 00 00 00 60 00 00 00",
+      "valueBytes": [6, 7],
+      "scale": 159,
+      "offset": 0,
+      "min": 0,
+      "max": 120,
+      "unit": "mph",
+      "intervalMs": 100
+    },
+    "FUEL": {
+      "canId": "0x207",
+      "base": "00 00 00 00 00 00 00 00",
+      "valueBytes": [2],
+      "scale": 2.55,
+      "offset": 0,
+      "min": 0,
+      "max": 100,
+      "unit": "%",
+      "intervalMs": 200
+    }
+  },
+
+  "temperature": {
+    "canId": "0x156",
+    "base": "00 00 00 00 03 00 00 00",
+    "intervalMs": 100,
+    "sensors": {
+      "COOLANT": {
+        "byte": 0,
+        "formula": "(value - 32) * 5 / 9 + 60"
+      },
+      "OIL": {
+        "byte": 1,
+        "formula": "(value - 32) * 5 / 9 + 60"
+      }
+    }
+  },
+
+  "tpms": {
+    "canId": "0x3B5",
+    "base": "00 00 00 00 00 00 00 00",
+    "intervalMs": 200,
+    "inputUnit": "psi",
+    "tires": {
+      "FL": { "byte": 1, "scale": 6.895 },
+      "FR": { "byte": 3, "scale": 6.895 },
+      "RL": { "byte": 5, "scale": 6.895 },
+      "RR": { "byte": 7, "scale": 6.895 }
+    }
+  },
+
+  "blinkers": {
+    "canId": "0x3B3",
+    "canIdAlt": "0x3B2",
+    "base": "40 48 C0 10 10 00 00 02",
+    "intervalMs": 10,
+    "blinkRateMs": 500,
+    "left": {
+      "byte": 6,
+      "mask": "0x40"
+    },
+    "right": {
+      "byte": 4,
+      "mask": "0x08"
+    }
+  },
+
+  "vin": {
+    "canId": "0x40A",
+    "intervalMs": 200,
+    "format": "multiframe",
+    "framePrefix": "C1"
+  },
+
+  "background": [
+    {
+      "canId": "0x109",
+      "data": "00 03 01 00 00 00 00 28",
+      "intervalMs": 10,
+      "description": "Cluster keepalive"
+    },
+    {
+      "canId": "0x416",
+      "data": "50 00 FE 00 01 00 00 00",
+      "intervalMs": 10,
+      "description": "ABS/Traction control status"
+    }
+  ]
+}

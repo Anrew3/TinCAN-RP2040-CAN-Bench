@@ -1,0 +1,108 @@
+{
+  "$schema": "./schema.json",
+  "name": "New Vehicle Template",
+  "id": "new_vehicle",
+  "version": "1.0.0",
+  "author": "",
+  "description": "Blank template - fill in your vehicle's CAN bus message mappings",
+
+  "vehicle": {
+    "make": "",
+    "model": "",
+    "years": "",
+    "platform": ""
+  },
+
+  "buttons": {
+    "canId": "0x000",
+    "holdMs": 100,
+    "intervalMs": 10,
+    "default": "00 00 00 00 00 00 00 00",
+    "commands": {
+      "UP": "00 00 00 00 00 00 00 00",
+      "DOWN": "00 00 00 00 00 00 00 00",
+      "LEFT": "00 00 00 00 00 00 00 00",
+      "RIGHT": "00 00 00 00 00 00 00 00",
+      "OK": "00 00 00 00 00 00 00 00",
+      "SETTINGS": "00 00 00 00 00 00 00 00"
+    }
+  },
+
+  "gauges": {
+    "RPM": {
+      "canId": "0x000",
+      "base": "00 00 00 00 00 00 00 00",
+      "valueBytes": [0, 1],
+      "scale": 1,
+      "offset": 0,
+      "min": 0,
+      "max": 8000,
+      "unit": "rpm",
+      "intervalMs": 100
+    },
+    "SPEED": {
+      "canId": "0x000",
+      "base": "00 00 00 00 00 00 00 00",
+      "valueBytes": [0, 1],
+      "scale": 1,
+      "offset": 0,
+      "min": 0,
+      "max": 200,
+      "unit": "mph",
+      "intervalMs": 100
+    }
+  },
+
+  "temperature": {
+    "canId": "0x000",
+    "base": "00 00 00 00 00 00 00 00",
+    "intervalMs": 100,
+    "sensors": {
+      "COOLANT": {
+        "byte": 0,
+        "formula": "value"
+      },
+      "OIL": {
+        "byte": 1,
+        "formula": "value"
+      }
+    }
+  },
+
+  "tpms": {
+    "canId": "0x000",
+    "base": "00 00 00 00 00 00 00 00",
+    "intervalMs": 200,
+    "inputUnit": "psi",
+    "tires": {
+      "FL": { "byte": 0, "scale": 1 },
+      "FR": { "byte": 1, "scale": 1 },
+      "RL": { "byte": 2, "scale": 1 },
+      "RR": { "byte": 3, "scale": 1 }
+    }
+  },
+
+  "blinkers": {
+    "canId": "0x000",
+    "base": "00 00 00 00 00 00 00 00",
+    "intervalMs": 10,
+    "blinkRateMs": 500,
+    "left": {
+      "byte": 0,
+      "mask": "0x01"
+    },
+    "right": {
+      "byte": 0,
+      "mask": "0x02"
+    }
+  },
+
+  "vin": {
+    "canId": "0x000",
+    "intervalMs": 200,
+    "format": "multiframe",
+    "framePrefix": "00"
+  },
+
+  "background": []
+}

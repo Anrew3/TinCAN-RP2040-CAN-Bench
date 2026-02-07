@@ -1,0 +1,41 @@
+# TinCAN CAN-BUS Simulator .gitignore
+
+# Claude AI session files
+.claude/
+*.claude
+claude-*
+CLAUDE.md
+
+# Personal/Private files
+*.private
+*.personal
+notes-personal.*
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Build outputs
+*.elf
+*.hex
+*.bin
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+
+# Logs
+*.log

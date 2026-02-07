@@ -1,0 +1,295 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://tincan.dev/schemas/vehicle-template.json",
+  "title": "TinCAN Vehicle Template",
+  "description": "Schema for defining CAN bus message mappings for vehicle simulation",
+  "type": "object",
+  "required": ["name", "id", "version", "buttons", "gauges"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Human-readable name of the vehicle",
+      "examples": ["Ford Mustang S550 (2015-2023)"]
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9_]+$",
+      "description": "Unique identifier for the template (lowercase, underscores)",
+      "examples": ["mustang_s550", "f150_13gen"]
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Semantic version of the template",
+      "examples": ["1.0.0"]
+    },
+    "author": {
+      "type": "string",
+      "description": "Template author or contributor",
+      "examples": ["TinCAN Community"]
+    },
+    "description": {
+      "type": "string",
+      "description": "Detailed description of the vehicle and template"
+    },
+    "vehicle": {
+      "type": "object",
+      "description": "Vehicle metadata",
+      "properties": {
+        "make": { "type": "string" },
+        "model": { "type": "string" },
+        "years": { "type": "string" },
+        "platform": { "type": "string" }
+      }
+    },
+    "buttons": {
+      "type": "object",
+      "description": "Steering wheel and console button mappings",
+      "properties": {
+        "canId": {
+          "type": "string",
+          "pattern": "^0x[0-9A-Fa-f]+$",
+          "description": "CAN ID for button messages"
+        },
+        "holdMs": {
+          "type": "integer",
+          "minimum": 10,
+          "default": 100,
+          "description": "How long to hold button message (ms)"
+        },
+        "intervalMs": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 10,
+          "description": "Interval between repeated button messages"
+        },
+        "default": {
+          "type": "string",
+          "pattern": "^([0-9A-Fa-f]{2}\\s?)+$",
+          "description": "Default/idle message data (sent when no button pressed)"
+        },
+        "commands": {
+          "type": "object",
+          "description": "Button command to data mapping",
+          "additionalProperties": {
+            "type": "string",
+            "pattern": "^([0-9A-Fa-f]{2}\\s?)+$"
+          }
+        }
+      },
+      "required": ["canId", "commands"]
+    },
+    "gauges": {
+      "type": "object",
+      "description": "Gauge/sensor value mappings",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "canId": {
+            "type": "string",
+            "pattern": "^0x[0-9A-Fa-f]+$"
+          },
+          "base": {
+            "type": "string",
+            "pattern": "^([0-9A-Fa-f]{2}\\s?)+$",
+            "description": "Base message data (template)"
+          },
+          "valueBytes": {
+            "type": "array",
+            "items": { "type": "integer", "minimum": 0, "maximum": 7 },
+            "description": "Byte positions for the value (big-endian order)"
+          },
+          "scale": {
+            "type": "number",
+            "description": "Multiply input value by this factor"
+          },
+          "offset": {
+            "type": "number",
+            "default": 0,
+            "description": "Add this after scaling"
+          },
+          "min": {
+            "type": "number",
+            "description": "Minimum input value"
+          },
+          "max": {
+            "type": "number",
+            "description": "Maximum input value"
+          },
+          "unit": {
+            "type": "string",
+            "description": "Display unit"
+          },
+          "intervalMs": {
+            "type": "integer",
+            "minimum": 1,
+            "default": 100
+          }
+        },
+        "required": ["canId", "base", "valueBytes", "scale"]
+      }
+    },
+    "temperature": {
+      "type": "object",
+      "description": "Temperature sensor mappings",
+      "properties": {
+        "canId": {
+          "type": "string",
+          "pattern": "^0x[0-9A-Fa-f]+$"
+        },
+        "base": {
+          "type": "string",
+          "pattern": "^([0-9A-Fa-f]{2}\\s?)+$"
+        },
+        "intervalMs": {
+          "type": "integer",
+          "default": 100
+        },
+        "sensors": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "byte": { "type": "integer", "minimum": 0, "maximum": 7 },
+              "formula": { "type": "string", "description": "Conversion formula, use 'value' as input variable" }
+            },
+            "required": ["byte", "formula"]
+          }
+        }
+      }
+    },
+    "tpms": {
+      "type": "object",
+      "description": "Tire Pressure Monitoring System mappings",
+      "properties": {
+        "canId": {
+          "type": "string",
+          "pattern": "^0x[0-9A-Fa-f]+$"
+        },
+        "base": {
+          "type": "string",
+          "pattern": "^([0-9A-Fa-f]{2}\\s?)+$"
+        },
+        "intervalMs": {
+          "type": "integer",
+          "default": 200
+        },
+        "inputUnit": {
+          "type": "string",
+          "enum": ["psi", "kpa", "bar"],
+          "default": "psi"
+        },
+        "tires": {
+          "type": "object",
+          "properties": {
+            "FL": { "$ref": "#/$defs/tireSensor" },
+            "FR": { "$ref": "#/$defs/tireSensor" },
+            "RL": { "$ref": "#/$defs/tireSensor" },
+            "RR": { "$ref": "#/$defs/tireSensor" }
+          }
+        }
+      }
+    },
+    "blinkers": {
+      "type": "object",
+      "description": "Turn signal/blinker mappings",
+      "properties": {
+        "canId": {
+          "type": "string",
+          "pattern": "^0x[0-9A-Fa-f]+$"
+        },
+        "canIdAlt": {
+          "type": "string",
+          "pattern": "^0x[0-9A-Fa-f]+$",
+          "description": "Secondary CAN ID if needed"
+        },
+        "base": {
+          "type": "string",
+          "pattern": "^([0-9A-Fa-f]{2}\\s?)+$"
+        },
+        "intervalMs": {
+          "type": "integer",
+          "default": 10
+        },
+        "blinkRateMs": {
+          "type": "integer",
+          "default": 500,
+          "description": "Blink on/off rate in milliseconds"
+        },
+        "left": {
+          "type": "object",
+          "properties": {
+            "byte": { "type": "integer" },
+            "mask": { "type": "string", "pattern": "^0x[0-9A-Fa-f]+$" }
+          }
+        },
+        "right": {
+          "type": "object",
+          "properties": {
+            "byte": { "type": "integer" },
+            "mask": { "type": "string", "pattern": "^0x[0-9A-Fa-f]+$" }
+          }
+        }
+      }
+    },
+    "vin": {
+      "type": "object",
+      "description": "Vehicle Identification Number messaging",
+      "properties": {
+        "canId": {
+          "type": "string",
+          "pattern": "^0x[0-9A-Fa-f]+$"
+        },
+        "intervalMs": {
+          "type": "integer",
+          "default": 200
+        },
+        "format": {
+          "type": "string",
+          "enum": ["multiframe", "single"],
+          "default": "multiframe",
+          "description": "How VIN is transmitted"
+        },
+        "framePrefix": {
+          "type": "string",
+          "description": "Prefix bytes for each frame"
+        }
+      }
+    },
+    "background": {
+      "type": "array",
+      "description": "Background messages sent continuously",
+      "items": {
+        "type": "object",
+        "properties": {
+          "canId": {
+            "type": "string",
+            "pattern": "^0x[0-9A-Fa-f]+$"
+          },
+          "data": {
+            "type": "string",
+            "pattern": "^([0-9A-Fa-f]{2}\\s?)+$"
+          },
+          "intervalMs": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "required": ["canId", "data", "intervalMs"]
+      }
+    }
+  },
+  "$defs": {
+    "tireSensor": {
+      "type": "object",
+      "properties": {
+        "byte": { "type": "integer", "minimum": 0, "maximum": 7 },
+        "scale": { "type": "number", "description": "Multiply PSI by this to get output value" }
+      },
+      "required": ["byte", "scale"]
+    }
+  }
+}
