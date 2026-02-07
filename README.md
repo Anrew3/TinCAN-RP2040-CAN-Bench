@@ -28,18 +28,17 @@
 ## Wiring (TINCAN)
 ![Screenshot](docs/images/TinCAN_Wiring.jpg)
 
-## Flashing Firmware
+## TinCAN Controller & Flasher
 
-Use this site to flash the firmware via USB once the device is built. If you have issues you can use the Arduino IDE as well to build & upload manually.
+Flash firmware, control your device, and manage vehicle templates - all from your browser.
 
 <div align="center">
-  <a href="https://anrew3.github.io/TinCAN-RP2040-CAN-Simulator/tincan-flasher.html"
-     target="_blank"
-     rel="noopener noreferrer">
-    <img src="https://img.shields.io/badge/🔧%20Flash%20Firmware-Open%20Flasher-blue?style=for-the-badge&logo=browser&logoColor=white"
-         alt="Open TinCAN Flasher">
+  <a href="https://anrew3.github.io/TinCAN-CANBUS-Simulator/firmware/Controller/can-controller.html">
+    <img src="https://img.shields.io/badge/Open_TinCAN_Controller-00A86B?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Open TinCAN Controller">
   </a>
 </div>
+
+> **Features:** USB Firmware Flashing • Real-time CAN Control • Vehicle Template Editor • Custom Button Mapping
 
 ## WIRING HARNESS ADDONS
   - [SYNC3 (Coming Soon)](https://www.google.com)
