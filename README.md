@@ -5,7 +5,7 @@
 
 ### What's the point?
   At the time there is no existing project to power/boot SYNC 4 models and/or newer(2020+) modules. There also isn't a compact user friendly option to do so.
-## [Purchase Kit, Harness's, or Parts Here](https://www.google.com)
+
 ![Screenshot](docs/images/TinCANP4.png)
 
 ## How do I build this?
