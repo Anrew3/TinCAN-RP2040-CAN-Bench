@@ -3511,6 +3511,8 @@
         // ============================================
         const Toast = {
             container: null,
+            activeToasts: {},
+            timeouts: {},
 
             init() {
                 if (this.container) return;
@@ -3531,6 +3533,15 @@
 
             show(message, type = 'info', duration = 4000) {
                 this.init();
+
+                const key = `${type}:${message}`;
+
+                // If same toast exists, reset timeout instead of creating new one
+                if (this.activeToasts[key]) {
+                    clearTimeout(this.timeouts[key]);
+                    this.timeouts[key] = setTimeout(() => this.dismiss(key), duration);
+                    return this.activeToasts[key];
+                }
 
                 const toast = document.createElement('div');
                 const colors = {
@@ -3560,6 +3571,7 @@
                 toast.innerHTML = `<span style="font-size: 16px;">${icon}</span><span>${message}</span>`;
 
                 this.container.appendChild(toast);
+                this.activeToasts[key] = toast;
 
                 // Animate in
                 requestAnimationFrame(() => {
@@ -3567,12 +3579,19 @@
                 });
 
                 // Auto dismiss
-                setTimeout(() => {
-                    toast.style.transform = 'translateX(120%)';
-                    setTimeout(() => toast.remove(), 300);
-                }, duration);
+                this.timeouts[key] = setTimeout(() => this.dismiss(key), duration);
 
                 return toast;
+            },
+
+            dismiss(key) {
+                const toast = this.activeToasts[key];
+                if (toast) {
+                    toast.style.transform = 'translateX(120%)';
+                    setTimeout(() => toast.remove(), 300);
+                    delete this.activeToasts[key];
+                    delete this.timeouts[key];
+                }
             },
 
             success(message, duration) { return this.show(message, 'success', duration); },
