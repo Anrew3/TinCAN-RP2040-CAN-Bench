@@ -3499,7 +3499,7 @@
                 return `https://raw.githubusercontent.com/${this.REPO_OWNER}/${this.REPO_NAME}/${this.REPO_BRANCH}`;
             },
             get FIRMWARE_URL() {
-                return `${this.RAW_URL}/firmware/rp2040/uf2/can_sim.uf2`;
+                return `${this.RAW_URL}/firmware/uf2/can_sim.uf2`;
             },
             get TEMPLATES_URL() {
                 return `${this.RAW_URL}/templates`;
@@ -4998,7 +4998,7 @@
         // Use CONFIG values (can also use local file as fallback)
         const LATEST_FIRMWARE_VERSION = CONFIG.LATEST_FIRMWARE_VERSION;
         const OFFICIAL_FIRMWARE_URL = CONFIG.FIRMWARE_URL;
-        const LOCAL_FIRMWARE_URL = './firmware/rp2040/uf2/can_sim.uf2';
+        const LOCAL_FIRMWARE_URL = './firmware/uf2/can_sim.uf2';
 
         // Firmware update state (matching original 5-step flasher)
         let fwCurrentStep = 0;
