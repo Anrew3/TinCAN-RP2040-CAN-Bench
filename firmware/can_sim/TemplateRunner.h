@@ -21,6 +21,9 @@ public:
     // Handle a command (RPM, SPEED, BUTTON, etc.)
     void handleCommand(String* tokens, int count);
 
+    // (Re)play the template's one-shot boot message sequence
+    void startBootSequence();
+
     // Get current state
     int getRPM() { return currentRPM; }
     int getSpeed() { return currentSpeed; }
@@ -48,6 +51,11 @@ private:
     bool buttonActive;
     byte currentButtonData[8];
     unsigned long buttonPressStartTime;
+
+    // Boot sequence state
+    bool bootActive;
+    byte bootIndex;
+    unsigned long bootNextTime;
 
     // Timing
     unsigned long lastButtonTime;

@@ -104,5 +104,7 @@
     "framePrefix": "00"
   },
 
-  "background": []
+  "background": [],
+
+  "boot": []
 }
