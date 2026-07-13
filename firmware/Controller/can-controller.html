@@ -3657,6 +3657,8 @@
 
         // State
         let serialPort = null;
+        let currentReader = null;
+        let readLoopPromise = null;
         let isConnected = false;
         let isConnecting = false;
         let verboseMode = false;
@@ -4902,7 +4904,7 @@
                 updateConnectionUI(true);
                 log('Connected', 'received');
                 Toast.success('Connected to TinCAN');
-                readLoop();
+                readLoopPromise = readLoop();
                 // Request firmware version
                 setTimeout(() => sendCommand('VERSION'), 500);
             } catch (error) {
@@ -4920,13 +4922,29 @@
         }
 
         async function disconnect() {
+            isConnected = false;
+            // The port can't close while readLoop holds a lock on the
+            // readable stream: cancel the reader and wait for the loop
+            // to release it, otherwise close() rejects and the OS keeps
+            // the port open (which then blocks the firmware flasher).
+            try {
+                if (currentReader) await currentReader.cancel();
+            } catch (error) {
+                console.warn('Error cancelling reader:', error);
+            }
+            try {
+                if (readLoopPromise) await readLoopPromise;
+            } catch (error) {
+                console.warn('Read loop error on disconnect:', error);
+            }
             try {
                 if (serialPort) await serialPort.close();
             } catch (error) {
                 console.warn('Error closing port:', error);
             }
             serialPort = null;
-            isConnected = false;
+            currentReader = null;
+            readLoopPromise = null;
             updateConnectionUI(false);
             log('Disconnected', 'info');
         }
@@ -4941,6 +4959,7 @@
         async function readLoop() {
             if (!serialPort?.readable) return;
             const reader = serialPort.readable.getReader();
+            currentReader = reader;
             const decoder = new TextDecoder();
             let buffer = '';
 
@@ -4965,9 +4984,10 @@
                     });
                 }
             } catch (e) {
-                log(`Read error: ${e.message}`, 'error');
+                if (isConnected) log(`Read error: ${e.message}`, 'error');
             } finally {
                 reader.releaseLock();
+                if (currentReader === reader) currentReader = null;
             }
         }
 
@@ -5017,7 +5037,7 @@
         // Use CONFIG values (can also use local file as fallback)
         const LATEST_FIRMWARE_VERSION = CONFIG.LATEST_FIRMWARE_VERSION;
         const OFFICIAL_FIRMWARE_URL = CONFIG.FIRMWARE_URL;
-        const LOCAL_FIRMWARE_URL = './firmware/uf2/can_sim.uf2';
+        const LOCAL_FIRMWARE_URL = '../uf2/can_sim.uf2';
 
         // Firmware update state (matching original 5-step flasher)
         let fwCurrentStep = 0;
@@ -5296,6 +5316,16 @@
 
             fwIsLoading = true;
             updateFirmwareStepUI();
+
+            // Release the controller's serial connection first — requestPort
+            // returns the same SerialPort object for an already-connected
+            // device, and the 1200-bps touch can't open a port that this
+            // page is still holding at 9600.
+            if (isConnected || serialPort) {
+                fwLog('Closing active serial connection...', 'info');
+                await disconnect();
+            }
+
             fwLog('Opening device selector...', 'info');
 
             try {
@@ -5331,13 +5361,18 @@
             fwIsLoading = true;
             updateFirmwareStepUI();
 
+            // The controller may still hold this same port open at 9600
+            // (e.g. flasher opened via the update badge while connected)
+            if (isConnected || serialPort) {
+                fwLog('Closing active serial connection...', 'info');
+                await disconnect();
+            }
+
             // Close port if open
             try {
-                if (fwPortIsOpen) {
-                    await fwSelectedPort.close();
-                    fwPortIsOpen = false;
-                }
-            } catch (e) { /* ignore */ }
+                await fwSelectedPort.close();
+            } catch (e) { /* ignore — likely already closed */ }
+            fwPortIsOpen = false;
 
             try {
                 fwLog('Opening at 1200 bps...', 'info');
