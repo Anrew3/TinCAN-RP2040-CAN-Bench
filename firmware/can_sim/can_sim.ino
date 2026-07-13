@@ -186,6 +186,7 @@ void setup() {
         Serial.println("  TEMPLATE:EXPORT      - Export template as JSON");
         Serial.println("  TEMPLATE:UPLOAD:<sz> - Upload template (sz=bytes)");
         Serial.println("  TEMPLATE:DELETE:<id> - Delete custom template");
+        Serial.println("  BOOTSEQ              - Replay template boot sequence");
         Serial.println();
         Serial.println("Vehicle Commands:");
         Serial.println("  RPM:<value>          - Set RPM");
@@ -326,6 +327,12 @@ void handleSerialLine(const String& line) {
         }
         delay(100);
         softwareReset();
+        return;
+    }
+
+    if (cmd == "BOOTSEQ") {
+        templateRunner.startBootSequence();
+        if (Serial) Serial.println("OK: Replaying template boot sequence");
         return;
     }
 

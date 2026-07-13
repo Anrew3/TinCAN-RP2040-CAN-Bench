@@ -280,6 +280,32 @@
         },
         "required": ["canId", "data", "intervalMs"]
       }
+    },
+    "boot": {
+      "type": "array",
+      "description": "Boot sequence - one-shot messages sent in order at power-up / template load (max 10). delayMs is the wait before that frame is sent, so sequences can pace head-unit init handshakes. Replay with the BOOTSEQ serial command.",
+      "maxItems": 10,
+      "items": {
+        "type": "object",
+        "properties": {
+          "canId": {
+            "type": "string",
+            "pattern": "^0x[0-9A-Fa-f]+$"
+          },
+          "data": {
+            "type": "string",
+            "pattern": "^([0-9A-Fa-f]{2}\\s?)+$"
+          },
+          "delayMs": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "required": ["canId", "data"]
+      }
     }
   },
   "$defs": {

@@ -30,6 +30,10 @@ TemplateRunner::TemplateRunner() {
     memset(currentButtonData, 0, sizeof(currentButtonData));
     buttonPressStartTime = 0;
 
+    bootActive = false;
+    bootIndex = 0;
+    bootNextTime = 0;
+
     lastButtonTime = 0;
     memset(lastGaugeTimes, 0, sizeof(lastGaugeTimes));
     lastTempTime = 0;
@@ -50,11 +54,32 @@ void TemplateRunner::setTemplate(Template* t) {
     if (tmpl) {
         memcpy(currentTempMessage, tmpl->tempBase, 8);
         prepareVINMessages();
+        startBootSequence();
+    }
+}
+
+void TemplateRunner::startBootSequence() {
+    bootIndex = 0;
+    bootActive = (tmpl && tmpl->numBootMsgs > 0);
+    if (bootActive) {
+        bootNextTime = millis() + tmpl->bootMsgs[0].delayMs;
     }
 }
 
 void TemplateRunner::tick(unsigned long now) {
     if (!canBus || !tmpl) return;
+
+    // One-shot boot sequence, paced by each message's delayMs
+    while (bootActive && (long)(now - bootNextTime) >= 0) {
+        BootMsgDef* m = &tmpl->bootMsgs[bootIndex];
+        canBus->sendMsgBuf(m->canId, 0, m->len, m->data);
+        bootIndex++;
+        if (bootIndex >= tmpl->numBootMsgs) {
+            bootActive = false;
+        } else {
+            bootNextTime = now + tmpl->bootMsgs[bootIndex].delayMs;
+        }
+    }
 
     // Button/default message
     if (now - lastButtonTime >= tmpl->buttonIntervalMs) {

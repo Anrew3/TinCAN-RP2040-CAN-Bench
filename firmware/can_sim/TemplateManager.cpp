@@ -580,6 +580,26 @@ bool TemplateManager::parseJsonToTemplate(const char* json, size_t len, Template
         }
     }
 
+    // Boot sequence (one-shot messages at power-up / template load)
+    if (doc.containsKey("boot")) {
+        JsonArray boot = doc["boot"];
+        t->numBootMsgs = 0;
+        for (JsonObject msg : boot) {
+            if (t->numBootMsgs >= MAX_BOOT_MSGS) break;
+            BootMsgDef* b = &t->bootMsgs[t->numBootMsgs];
+
+            b->canId = strtoul(msg["canId"] | "0x000", nullptr, 0);
+            b->delayMs = msg["delayMs"] | 50;
+
+            if (msg.containsKey("data")) {
+                String dataStr = msg["data"].as<String>();
+                b->len = parseHexBytes(dataStr.c_str(), b->data, 8);
+            }
+
+            t->numBootMsgs++;
+        }
+    }
+
     return true;
 }
 
@@ -695,6 +715,19 @@ void TemplateManager::templateToJson(const Template* t, char* buffer, size_t buf
         bytesToHexString(t->backgroundMsgs[i].data, t->backgroundMsgs[i].len, hexBuf, sizeof(hexBuf));
         msg["data"] = hexBuf;
         msg["intervalMs"] = t->backgroundMsgs[i].intervalMs;
+    }
+
+    // Boot sequence
+    if (t->numBootMsgs > 0) {
+        JsonArray boot = doc.createNestedArray("boot");
+        for (int i = 0; i < t->numBootMsgs; i++) {
+            JsonObject msg = boot.createNestedObject();
+            snprintf(hexBuf, sizeof(hexBuf), "0x%03X", (unsigned int)t->bootMsgs[i].canId);
+            msg["canId"] = hexBuf;
+            bytesToHexString(t->bootMsgs[i].data, t->bootMsgs[i].len, hexBuf, sizeof(hexBuf));
+            msg["data"] = hexBuf;
+            msg["delayMs"] = t->bootMsgs[i].delayMs;
+        }
     }
 
     serializeJsonPretty(doc, buffer, bufferSize);

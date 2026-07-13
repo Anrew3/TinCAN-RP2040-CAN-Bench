@@ -54,6 +54,16 @@ struct BackgroundMsgDef {
     unsigned long intervalMs;
 };
 
+// Boot message - sent once at power-up / template load, in order.
+// delayMs is the wait before this message is sent (relative to the
+// previous one), so a sequence can pace a head unit's init handshake.
+struct BootMsgDef {
+    unsigned long canId;
+    byte data[8];
+    byte len;
+    unsigned long delayMs;
+};
+
 // Complete Template structure
 struct Template {
     // Metadata
@@ -104,6 +114,10 @@ struct Template {
     // Background messages
     BackgroundMsgDef backgroundMsgs[MAX_BACKGROUND_MSGS];
     byte numBackgroundMsgs;
+
+    // Boot sequence (one-shot, in order, at power-up / template load)
+    BootMsgDef bootMsgs[MAX_BOOT_MSGS];
+    byte numBootMsgs;
 };
 
 // Helper to initialize a template to defaults

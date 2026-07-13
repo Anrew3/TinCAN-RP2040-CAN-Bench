@@ -21,6 +21,7 @@
 #define MAX_TEMP_SENSORS 4
 #define MAX_TIRES 4
 #define MAX_BACKGROUND_MSGS 5
+#define MAX_BOOT_MSGS 10
 
 // Global logging control (defined in can_sim.ino)
 extern bool g_verboseSerial;

@@ -34,6 +34,23 @@ flasher's "Official Firmware" option serves it.
 | `TEMPLATE:SHOW` / `TEMPLATE:EXPORT` | Inspect / dump active template |
 | `TEMPLATE:UPLOAD:<size>[:<crc32>]` | Start upload; optional CRC32 (hex, IEEE) of the payload is verified before import |
 | `TEMPLATE:DELETE:<id>` | Delete a custom template |
+| `BOOTSEQ` | Replay the template's boot message sequence |
+
+Templates define two kinds of standing CAN traffic, both fully customizable
+per template (and editable in the web controller's Template Editor):
+
+- **`background`** — keepalives sent continuously at each message's
+  `intervalMs` (e.g. cluster heartbeat `0x109`); max 5.
+- **`boot`** — a one-shot sequence sent in order at power-up and on template
+  load, each frame after its own `delayMs`; max 10. Use for head-unit /
+  SYNC init handshakes. Replay manually with `BOOTSEQ`.
+
+```json
+"boot": [
+  { "canId": "0x109", "data": "00 03 01 00 00 00 00 24", "delayMs": 100 },
+  { "canId": "0x3B2", "data": "40 48 00 10 10 00 00 02", "delayMs": 250 }
+]
+```
 
 Upload flow: send the command, wait for `TEMPLATE_UPLOAD_READY`, send the JSON,
 then `TEMPLATE_UPLOAD_END`. On success: `TEMPLATE_UPLOAD_OK`. On CRC failure:

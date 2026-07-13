@@ -1487,6 +1487,55 @@
             color: var(--text-primary);
         }
 
+        /* Background / boot message editor rows */
+        .msg-rows-hint {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin: 4px 0 8px;
+        }
+
+        .msg-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 6px;
+        }
+
+        .msg-row input {
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+            font-size: 12px;
+            padding: 6px 8px;
+            outline: none;
+        }
+
+        .msg-row input:focus {
+            border-color: var(--primary);
+        }
+
+        .msg-row input[data-f="canId"] { width: 80px; }
+        .msg-row input[data-f="data"] { flex: 1; min-width: 140px; }
+        .msg-row input[data-f="time"] { width: 70px; }
+
+        .msg-remove-btn {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            color: var(--danger);
+            cursor: pointer;
+            font-size: 14px;
+            line-height: 1;
+            padding: 6px 9px;
+        }
+
+        .msg-remove-btn:hover {
+            background: var(--danger);
+            color: #fff;
+        }
+
         /* Console hidden by default */
         .console-card {
             display: none;
@@ -3330,6 +3379,22 @@
                     <div class="can-mapping-grid" id="gaugeMappings"></div>
                 </div>
 
+                <!-- Background keepalives + boot sequence -->
+                <div class="template-section" id="bgMsgsSection" style="display: none;">
+                    <div class="template-section-header">
+                        <span class="template-section-title">Background Messages (keepalives — sent continuously)</span>
+                        <button class="template-btn" id="addBgMsgBtn">+ Add</button>
+                    </div>
+                    <div class="msg-rows-hint">These wake and hold the cluster/SYNC alive (e.g. heartbeat 0x109). ID · data bytes · interval ms</div>
+                    <div id="bgMsgRows"></div>
+                    <div class="template-section-header" style="margin-top: 14px;">
+                        <span class="template-section-title">Boot Sequence (sent once at power-up, in order)</span>
+                        <button class="template-btn" id="addBootMsgBtn">+ Add</button>
+                    </div>
+                    <div class="msg-rows-hint">One-shot init frames for head-unit handshakes. ID · data bytes · delay ms before this frame. Replay anytime with the BOOTSEQ command.</div>
+                    <div id="bootMsgRows"></div>
+                </div>
+
                 <!-- Custom Buttons -->
                 <div class="template-section" id="customButtonsSection" style="display: none;">
                     <div class="template-section-header">
@@ -4056,11 +4121,15 @@
             document.getElementById('templateInfoSection').style.display = 'block';
             document.getElementById('buttonMappingsSection').style.display = 'block';
             document.getElementById('gaugeMappingsSection').style.display = 'block';
+            document.getElementById('bgMsgsSection').style.display = 'block';
             document.getElementById('customButtonsSection').style.display = 'block';
             document.getElementById('saveSection').style.display = 'block';
 
             // Render custom buttons
             renderCustomButtons(template, isBuiltin);
+
+            // Render background keepalives + boot sequence
+            renderMsgRows(template, isBuiltin);
 
             // Populate info fields
             document.getElementById('tplName').value = template.name || '';
@@ -4143,7 +4212,8 @@
                 tpms: templates[editingTemplateId]?.tpms || {},
                 blinkers: templates[editingTemplateId]?.blinkers || {},
                 vin: templates[editingTemplateId]?.vin || {},
-                background: templates[editingTemplateId]?.background || [],
+                background: collectMsgRows('bg'),
+                boot: collectMsgRows('boot'),
                 customButtons: editingCustomButtons
             };
 
@@ -4191,6 +4261,7 @@
                 document.getElementById('templateInfoSection').style.display = 'none';
                 document.getElementById('buttonMappingsSection').style.display = 'none';
                 document.getElementById('gaugeMappingsSection').style.display = 'none';
+                document.getElementById('bgMsgsSection').style.display = 'none';
                 document.getElementById('customButtonsSection').style.display = 'none';
                 document.getElementById('saveSection').style.display = 'none';
 
@@ -4198,6 +4269,58 @@
                 updateVehicleSelector();
                 log('Template deleted', 'info');
             }
+        }
+
+        // ---- Background / boot message row editors ----
+
+        const MSG_ROW_LIMITS = { bg: 5, boot: 10 };   // device-side caps
+
+        function msgRowHtml(kind, msg, isBuiltin) {
+            const ro = isBuiltin ? 'readonly' : '';
+            const time = kind === 'bg' ? (msg.intervalMs ?? 10) : (msg.delayMs ?? 50);
+            const timeTitle = kind === 'bg' ? 'Interval (ms)' : 'Delay before this frame (ms)';
+            return `
+                <div class="msg-row" data-msgrow="${kind}">
+                    <input type="text" data-f="canId" value="${msg.canId || '0x000'}" placeholder="CAN ID" title="CAN ID (hex)" ${ro}>
+                    <input type="text" data-f="data" value="${msg.data || '00 00 00 00 00 00 00 00'}" placeholder="Data bytes (hex)" title="Up to 8 hex bytes" ${ro}>
+                    <input type="number" data-f="time" value="${time}" min="0" title="${timeTitle}" ${ro}>
+                    ${isBuiltin ? '' : '<button class="msg-remove-btn" data-removerow title="Remove">&times;</button>'}
+                </div>`;
+        }
+
+        function renderMsgRows(template, isBuiltin) {
+            document.getElementById('bgMsgRows').innerHTML =
+                (template.background || []).map(m => msgRowHtml('bg', m, isBuiltin)).join('');
+            document.getElementById('bootMsgRows').innerHTML =
+                (template.boot || []).map(m => msgRowHtml('boot', m, isBuiltin)).join('');
+            document.getElementById('addBgMsgBtn').style.display = isBuiltin ? 'none' : '';
+            document.getElementById('addBootMsgBtn').style.display = isBuiltin ? 'none' : '';
+        }
+
+        function addMsgRow(kind) {
+            const rows = document.querySelectorAll(`[data-msgrow="${kind}"]`);
+            if (rows.length >= MSG_ROW_LIMITS[kind]) {
+                Toast.warning(`Device supports up to ${MSG_ROW_LIMITS[kind]} ${kind === 'bg' ? 'background' : 'boot'} messages`);
+                return;
+            }
+            const container = document.getElementById(kind === 'bg' ? 'bgMsgRows' : 'bootMsgRows');
+            container.insertAdjacentHTML('beforeend', msgRowHtml(kind, {}, false));
+        }
+
+        function collectMsgRows(kind) {
+            const msgs = [];
+            document.querySelectorAll(`[data-msgrow="${kind}"]`).forEach(row => {
+                const get = f => row.querySelector(`[data-f="${f}"]`).value.trim();
+                const canId = get('canId');
+                const data = get('data');
+                if (!canId || !data) return;
+                const time = parseInt(get('time'));
+                const msg = { canId, data };
+                if (kind === 'bg') msg.intervalMs = isNaN(time) ? 10 : time;
+                else msg.delayMs = isNaN(time) ? 50 : time;
+                msgs.push(msg);
+            });
+            return msgs.slice(0, MSG_ROW_LIMITS[kind]);
         }
 
         function exportTemplate() {
@@ -4939,6 +5062,15 @@
                     document.querySelectorAll('#customBtnIconSelector .icon-option').forEach(o => o.classList.remove('active'));
                     opt.classList.add('active');
                 });
+            });
+
+            // Background / boot message editors (Template Editor)
+            document.getElementById('addBgMsgBtn').addEventListener('click', () => addMsgRow('bg'));
+            document.getElementById('addBootMsgBtn').addEventListener('click', () => addMsgRow('boot'));
+            document.getElementById('bgMsgsSection').addEventListener('click', (e) => {
+                if (e.target.hasAttribute('data-removerow')) {
+                    e.target.closest('.msg-row')?.remove();
+                }
             });
 
             // Bus Tools
