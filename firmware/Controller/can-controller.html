@@ -1416,55 +1416,9 @@
         .console-line.error { color: var(--danger); }
         .console-line.info { color: var(--text-muted); }
 
-        /* Bus Tools (sniffer / sweep / demo) */
-        .tools-row {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            padding: 8px 12px;
-            border-top: 1px solid var(--border-color);
-            flex-wrap: wrap;
-        }
-
-        .tools-row:first-of-type {
-            border-top: none;
-        }
-
-        .tools-label {
-            font-size: 11px;
-            font-weight: 600;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            min-width: 52px;
-        }
-
-        .tools-input {
-            background: var(--bg-input);
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-sm);
-            color: var(--text-primary);
-            font-size: 12px;
-            padding: 5px 8px;
-            width: 70px;
-            outline: none;
-        }
-
-        .tools-input:focus {
-            border-color: var(--primary);
-        }
-
-        .tools-input.wide {
-            flex: 1;
-            min-width: 100px;
-            width: auto;
-        }
-
-        select.tools-input {
-            width: auto;
-        }
-
-        .console-btn.active-mode {
+        /* Bus Tools modal (sniffer / sweep / demo) */
+        .console-btn.active-mode,
+        .template-btn.active-mode {
             background: var(--primary);
             color: #fff;
             border-color: var(--primary);
@@ -1473,13 +1427,14 @@
         .sniff-count {
             font-size: 11px;
             color: var(--text-muted);
-            margin-left: auto;
             white-space: nowrap;
         }
 
         .sniffer-output {
             height: 200px;
-            border-top: 1px solid var(--border-color);
+            margin-top: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
         }
 
         .sniffer-line {
@@ -2038,6 +1993,7 @@
         }
 
         .form-group input,
+        .form-group select,
         .form-group textarea {
             padding: 8px 10px;
             background: var(--bg-card);
@@ -3172,6 +3128,12 @@
                         </svg>
                         <span>Custom CAN</span>
                     </div>
+                    <div class="quick-btn" id="busToolsBtn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                        </svg>
+                        <span>Bus Tools</span>
+                    </div>
                     <div class="quick-btn" id="debugToggle">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1"/>
@@ -3217,41 +3179,6 @@
                         <span>Flash Firmware</span>
                     </div>
                 </div>
-            </div>
-
-            <!-- Bus Tools: sweep, demo, sniffer (firmware 2.1.0+) -->
-            <div class="card">
-                <div class="card-header">
-                    <span class="card-title">Bus Tools</span>
-                    <button class="console-btn" id="demoToggle" title="Looping scripted drive cycle">Demo Drive</button>
-                </div>
-                <div class="tools-row">
-                    <span class="tools-label">Sweep</span>
-                    <select class="tools-input" id="sweepGauge">
-                        <option value="RPM">RPM</option>
-                        <option value="SPEED">SPEED</option>
-                        <option value="FUEL">FUEL</option>
-                    </select>
-                    <input type="number" class="tools-input" id="sweepFrom" placeholder="From" value="800" title="Start value">
-                    <input type="number" class="tools-input" id="sweepTo" placeholder="To" value="6000" title="End value">
-                    <input type="number" class="tools-input" id="sweepMs" placeholder="ms" value="3000" title="Duration per pass (ms)">
-                    <select class="tools-input" id="sweepCycles" title="Passes">
-                        <option value="1">1 pass</option>
-                        <option value="2">There &amp; back</option>
-                        <option value="0">Loop</option>
-                    </select>
-                    <button class="console-btn" id="sweepStartBtn">Start</button>
-                    <button class="console-btn" id="sweepStopBtn">Stop</button>
-                </div>
-                <div class="tools-row">
-                    <span class="tools-label">Sniffer</span>
-                    <input type="text" class="tools-input wide" id="sniffFilter" placeholder="Filter ID (hex, optional)">
-                    <button class="console-btn" id="sniffToggle">Start</button>
-                    <button class="console-btn" id="sniffClearBtn">Clear</button>
-                    <button class="console-btn" id="sniffExportBtn" title="Save as candump .log (imports into SavvyCAN)">Export</button>
-                    <span class="sniff-count" id="sniffCount">0 frames</span>
-                </div>
-                <div class="console-output sniffer-output" id="snifferOutput" style="display: none;"></div>
             </div>
 
             <!-- Console (hidden by default) -->
@@ -3516,6 +3443,103 @@
                             Send
                         </button>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bus Tools Modal -->
+    <div class="modal-overlay" id="busToolsModal">
+        <div class="modal" style="max-width: 560px;">
+            <div class="modal-header">
+                <h2 class="modal-title">Bus Tools</h2>
+                <button class="modal-close" id="closeBusToolsModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Demo drive cycle -->
+                <div class="template-section">
+                    <div class="template-section-header">
+                        <span class="template-section-title">Demo Drive Cycle</span>
+                        <button class="template-btn primary" id="demoToggle">Demo Drive</button>
+                    </div>
+                    <div class="msg-rows-hint">Looping scripted drive: rev, pull away, blinkers, cruise, brake to a stop.</div>
+                </div>
+
+                <!-- Gauge sweep -->
+                <div class="template-section">
+                    <div class="template-section-header">
+                        <span class="template-section-title">Gauge Sweep</span>
+                    </div>
+                    <div class="template-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Gauge</label>
+                                <select id="sweepGauge">
+                                    <option value="RPM">RPM</option>
+                                    <option value="SPEED">SPEED</option>
+                                    <option value="FUEL">FUEL</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>From</label>
+                                <input type="number" id="sweepFrom" value="800">
+                            </div>
+                            <div class="form-group">
+                                <label>To</label>
+                                <input type="number" id="sweepTo" value="6000">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Duration (ms)</label>
+                                <input type="number" id="sweepMs" value="3000" min="100">
+                            </div>
+                            <div class="form-group">
+                                <label>Passes</label>
+                                <select id="sweepCycles">
+                                    <option value="1">1 pass</option>
+                                    <option value="2">There &amp; back</option>
+                                    <option value="0">Loop forever</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-actions" style="justify-content: flex-end; margin-top: 10px;">
+                        <button class="template-btn" id="sweepStopBtn">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+                            Stop
+                        </button>
+                        <button class="template-btn primary" id="sweepStartBtn">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                            Start Sweep
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Sniffer -->
+                <div class="template-section">
+                    <div class="template-section-header">
+                        <span class="template-section-title">CAN Sniffer</span>
+                        <span class="sniff-count" id="sniffCount">0 frames</span>
+                    </div>
+                    <div class="msg-rows-hint">Streams received frames in candump format — Export saves a .log that imports straight into SavvyCAN.</div>
+                    <div class="template-form">
+                        <div class="form-row">
+                            <div class="form-group" style="flex: 1;">
+                                <label>Filter ID (hex, optional)</label>
+                                <input type="text" id="sniffFilter" placeholder="e.g. 204" style="font-family: 'SF Mono', monospace;">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-actions" style="justify-content: flex-end; margin-top: 10px;">
+                        <button class="template-btn" id="sniffClearBtn">Clear</button>
+                        <button class="template-btn" id="sniffExportBtn" title="Save as candump .log (imports into SavvyCAN)">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg>
+                            Export
+                        </button>
+                        <button class="template-btn primary" id="sniffToggle">Start</button>
+                    </div>
+                    <div class="console-output sniffer-output" id="snifferOutput" style="display: none;"></div>
                 </div>
             </div>
         </div>
@@ -5073,7 +5097,18 @@
                 }
             });
 
-            // Bus Tools
+            // Bus Tools modal
+            document.getElementById('busToolsBtn').addEventListener('click', () => {
+                document.getElementById('busToolsModal').classList.add('active');
+            });
+            document.getElementById('closeBusToolsModal').addEventListener('click', () => {
+                document.getElementById('busToolsModal').classList.remove('active');
+            });
+            document.getElementById('busToolsModal').addEventListener('click', (e) => {
+                if (e.target === e.currentTarget) e.currentTarget.classList.remove('active');
+            });
+
+            // Bus Tools controls
             document.getElementById('demoToggle').addEventListener('click', toggleDemo);
             document.getElementById('sweepStartBtn').addEventListener('click', startSweepFromUi);
             document.getElementById('sweepStopBtn').addEventListener('click', () => {
