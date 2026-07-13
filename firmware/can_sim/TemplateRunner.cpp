@@ -128,7 +128,7 @@ void TemplateRunner::handleCommand(String* tokens, int count) {
                 if (strcasecmp(cmd.c_str(), "RPM") == 0) currentRPM = value;
                 if (strcasecmp(cmd.c_str(), "SPEED") == 0) currentSpeed = value;
 
-                if (Serial) {
+                if (Serial && !g_quietSet) {
                     Serial.print("[Runner] ");
                     Serial.print(gauge->name);
                     Serial.print(" set to ");

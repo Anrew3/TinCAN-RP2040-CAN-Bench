@@ -3489,7 +3489,7 @@
             REPO_BRANCH: 'main',
 
             // Firmware settings
-            LATEST_FIRMWARE_VERSION: '1.0.0',
+            LATEST_FIRMWARE_VERSION: '2.1.0',
 
             // URLs (auto-generated from repo settings)
             get REPO_URL() {
@@ -4135,12 +4135,16 @@
                 return;
             }
 
-            log(`Uploading template to device (${size} bytes)...`, 'info');
+            // CRC32 lets firmware 2.1.0+ verify the upload arrived intact;
+            // older firmware ignores the extra field
+            const crc = crc32(jsonBytes).toString(16).toUpperCase();
+
+            log(`Uploading template to device (${size} bytes, CRC ${crc})...`, 'info');
             Toast.info('Uploading template to device...');
 
             try {
                 // Send upload command
-                if (!await sendCommand(`TEMPLATE:UPLOAD:${size}`)) {
+                if (!await sendCommand(`TEMPLATE:UPLOAD:${size}:${crc}`)) {
                     throw new Error('Failed to send upload command');
                 }
 
@@ -4905,8 +4909,9 @@
                 log('Connected', 'received');
                 Toast.success('Connected to TinCAN');
                 readLoopPromise = readLoop();
-                // Request firmware version
+                // Request firmware version and device status
                 setTimeout(() => sendCommand('VERSION'), 500);
+                setTimeout(() => { if (isConnected) sendCommand('STATUS'); }, 900);
             } catch (error) {
                 if (error.name === 'NotFoundError') {
                     log('Cancelled', 'info');
@@ -5185,6 +5190,17 @@
             }
         }
 
+        function crc32(bytes) {
+            let crc = 0xFFFFFFFF;
+            for (let i = 0; i < bytes.length; i++) {
+                crc ^= bytes[i];
+                for (let b = 0; b < 8; b++) {
+                    crc = (crc >>> 1) ^ (0xEDB88320 & -(crc & 1));
+                }
+            }
+            return (crc ^ 0xFFFFFFFF) >>> 0;
+        }
+
         function compareVersions(v1, v2) {
             const parts1 = v1.split('.').map(Number);
             const parts2 = v2.split('.').map(Number);
@@ -5361,12 +5377,24 @@
             fwIsLoading = true;
             updateFirmwareStepUI();
 
+            // Fast path: firmware 2.1.0+ reboots straight to BOOTSEL on the
+            // BOOTLOADER command - no 1200-bps timing games needed. Older
+            // firmware ignores it and falls through to the 1200-bps touch.
+            let sentBootloaderCmd = false;
+            if (isConnected) {
+                fwLog('Sending BOOTLOADER command...', 'info');
+                try {
+                    sentBootloaderCmd = await sendCommand('BOOTLOADER');
+                } catch (e) { /* fall back to 1200-bps touch */ }
+            }
+
             // The controller may still hold this same port open at 9600
             // (e.g. flasher opened via the update badge while connected)
             if (isConnected || serialPort) {
                 fwLog('Closing active serial connection...', 'info');
                 await disconnect();
             }
+            if (sentBootloaderCmd) await sleep(1200);
 
             // Close port if open
             try {
@@ -5401,7 +5429,11 @@
                 fwCurrentStep = 3;
 
             } catch (error) {
-                if (isRebootError(error)) {
+                // A vanished port here means the device already rebooted -
+                // either from the BOOTLOADER command or the touch itself
+                const alreadyRebooted = sentBootloaderCmd &&
+                    /failed to open/i.test(String(error?.message || error));
+                if (isRebootError(error) || alreadyRebooted) {
                     fwPortIsOpen = false;
                     fwLog('Serial port disappeared during reset (expected).', 'success');
                     fwSelectedPort = null;
