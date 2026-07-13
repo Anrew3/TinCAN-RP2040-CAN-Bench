@@ -1416,6 +1416,77 @@
         .console-line.error { color: var(--danger); }
         .console-line.info { color: var(--text-muted); }
 
+        /* Bus Tools (sniffer / sweep / demo) */
+        .tools-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 12px;
+            border-top: 1px solid var(--border-color);
+            flex-wrap: wrap;
+        }
+
+        .tools-row:first-of-type {
+            border-top: none;
+        }
+
+        .tools-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            min-width: 52px;
+        }
+
+        .tools-input {
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-size: 12px;
+            padding: 5px 8px;
+            width: 70px;
+            outline: none;
+        }
+
+        .tools-input:focus {
+            border-color: var(--primary);
+        }
+
+        .tools-input.wide {
+            flex: 1;
+            min-width: 100px;
+            width: auto;
+        }
+
+        select.tools-input {
+            width: auto;
+        }
+
+        .console-btn.active-mode {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+        }
+
+        .sniff-count {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-left: auto;
+            white-space: nowrap;
+        }
+
+        .sniffer-output {
+            height: 200px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .sniffer-line {
+            margin-bottom: 1px;
+            color: var(--text-primary);
+        }
+
         /* Console hidden by default */
         .console-card {
             display: none;
@@ -3097,6 +3168,41 @@
                         <span>Flash Firmware</span>
                     </div>
                 </div>
+            </div>
+
+            <!-- Bus Tools: sweep, demo, sniffer (firmware 2.1.0+) -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Bus Tools</span>
+                    <button class="console-btn" id="demoToggle" title="Looping scripted drive cycle">Demo Drive</button>
+                </div>
+                <div class="tools-row">
+                    <span class="tools-label">Sweep</span>
+                    <select class="tools-input" id="sweepGauge">
+                        <option value="RPM">RPM</option>
+                        <option value="SPEED">SPEED</option>
+                        <option value="FUEL">FUEL</option>
+                    </select>
+                    <input type="number" class="tools-input" id="sweepFrom" placeholder="From" value="800" title="Start value">
+                    <input type="number" class="tools-input" id="sweepTo" placeholder="To" value="6000" title="End value">
+                    <input type="number" class="tools-input" id="sweepMs" placeholder="ms" value="3000" title="Duration per pass (ms)">
+                    <select class="tools-input" id="sweepCycles" title="Passes">
+                        <option value="1">1 pass</option>
+                        <option value="2">There &amp; back</option>
+                        <option value="0">Loop</option>
+                    </select>
+                    <button class="console-btn" id="sweepStartBtn">Start</button>
+                    <button class="console-btn" id="sweepStopBtn">Stop</button>
+                </div>
+                <div class="tools-row">
+                    <span class="tools-label">Sniffer</span>
+                    <input type="text" class="tools-input wide" id="sniffFilter" placeholder="Filter ID (hex, optional)">
+                    <button class="console-btn" id="sniffToggle">Start</button>
+                    <button class="console-btn" id="sniffClearBtn">Clear</button>
+                    <button class="console-btn" id="sniffExportBtn" title="Save as candump .log (imports into SavvyCAN)">Export</button>
+                    <span class="sniff-count" id="sniffCount">0 frames</span>
+                </div>
+                <div class="console-output sniffer-output" id="snifferOutput" style="display: none;"></div>
             </div>
 
             <!-- Console (hidden by default) -->
@@ -4834,6 +4940,16 @@
                     opt.classList.add('active');
                 });
             });
+
+            // Bus Tools
+            document.getElementById('demoToggle').addEventListener('click', toggleDemo);
+            document.getElementById('sweepStartBtn').addEventListener('click', startSweepFromUi);
+            document.getElementById('sweepStopBtn').addEventListener('click', () => {
+                if (isConnected) sendCommand('SWEEP:STOP');
+            });
+            document.getElementById('sniffToggle').addEventListener('click', toggleSniffer);
+            document.getElementById('sniffClearBtn').addEventListener('click', clearSniffer);
+            document.getElementById('sniffExportBtn').addEventListener('click', exportSniffer);
         }
 
         function resetToDefaults() {
@@ -4950,6 +5066,9 @@
             serialPort = null;
             currentReader = null;
             readLoopPromise = null;
+            // Mode buttons reflect this connection; STATUS resyncs on reconnect
+            setSniffUi(false);
+            setDemoUi(false);
             updateConnectionUI(false);
             log('Disconnected', 'info');
         }
@@ -4976,16 +5095,29 @@
                     const lines = buffer.split('\n');
                     buffer = lines.pop() || '';
                     lines.forEach(line => {
-                        if (line.trim()) {
-                            // Check for version response
-                            if (line.trim().startsWith('VERSION:')) {
-                                const version = line.trim().split(':')[1];
-                                document.getElementById('firmwareVersion').textContent = version;
-                                // Check if firmware update is available
-                                checkForUpdates(version);
-                            }
-                            log(line.trim(), 'received');
+                        const t = line.trim();
+                        if (!t) return;
+
+                        // Sniffer frames (candump format) go to their own panel
+                        if (SNIFF_LINE_RE.test(t)) {
+                            addSnifferLine(t);
+                            return;
                         }
+
+                        // Version response
+                        if (t.startsWith('VERSION:')) {
+                            const version = t.split(':')[1];
+                            document.getElementById('firmwareVersion').textContent = version;
+                            // Check if firmware update is available
+                            checkForUpdates(version);
+                        }
+
+                        // Device status snapshot (firmware 2.1.0+)
+                        if (t.startsWith('STATUS:')) {
+                            applyDeviceStatus(t.substring(7));
+                        }
+
+                        log(t, 'received');
                     });
                 }
             } catch (e) {
@@ -5020,6 +5152,142 @@
             if (cmd) {
                 sendCommand(cmd);
                 consoleInput.value = '';
+            }
+        }
+
+        // ============================================
+        // Bus Tools: Sniffer / Sweep / Demo (fw 2.1.0+)
+        // ============================================
+
+        const SNIFF_LINE_RE = /^\(\d+\.\d{6}\) can\d+ [0-9A-Fa-f]{3,8}#([0-9A-Fa-f]*|R)$/;
+        const SNIFF_LOG_MAX = 20000;   // frames kept for export
+        const SNIFF_VIEW_MAX = 300;    // frames kept in the visible panel
+        let sniffUiOn = false;
+        let demoUiOn = false;
+        let sniffLog = [];
+
+        function addSnifferLine(text) {
+            sniffLog.push(text);
+            if (sniffLog.length > SNIFF_LOG_MAX) sniffLog.splice(0, sniffLog.length - SNIFF_LOG_MAX);
+
+            const out = document.getElementById('snifferOutput');
+            out.style.display = 'block';
+            const div = document.createElement('div');
+            div.className = 'sniffer-line';
+            div.textContent = text;
+            out.appendChild(div);
+            while (out.children.length > SNIFF_VIEW_MAX) {
+                out.removeChild(out.firstChild);
+            }
+            out.scrollTop = out.scrollHeight;
+
+            document.getElementById('sniffCount').textContent = `${sniffLog.length} frames`;
+        }
+
+        function setSniffUi(on) {
+            sniffUiOn = on;
+            const btn = document.getElementById('sniffToggle');
+            btn.textContent = on ? 'Stop' : 'Start';
+            btn.classList.toggle('active-mode', on);
+            if (on) document.getElementById('snifferOutput').style.display = 'block';
+        }
+
+        function setDemoUi(on) {
+            demoUiOn = on;
+            const btn = document.getElementById('demoToggle');
+            btn.textContent = on ? 'Stop Demo' : 'Demo Drive';
+            btn.classList.toggle('active-mode', on);
+        }
+
+        async function toggleSniffer() {
+            if (!isConnected) {
+                Toast.warning('Connect to device first');
+                return;
+            }
+            if (!sniffUiOn) {
+                const filter = document.getElementById('sniffFilter').value.trim();
+                if (filter) {
+                    if (!/^(0x)?[0-9A-Fa-f]{1,8}$/.test(filter)) {
+                        Toast.error('Filter must be a hex CAN ID (e.g. 204)');
+                        return;
+                    }
+                    await sendCommand(`SNIFF:FILTER:${filter}`);
+                } else {
+                    await sendCommand('SNIFF:NOFILTER');
+                }
+                if (await sendCommand('SNIFF:ON')) setSniffUi(true);
+            } else {
+                await sendCommand('SNIFF:OFF');
+                setSniffUi(false);
+            }
+        }
+
+        function clearSniffer() {
+            sniffLog = [];
+            document.getElementById('snifferOutput').innerHTML = '';
+            document.getElementById('sniffCount').textContent = '0 frames';
+        }
+
+        function exportSniffer() {
+            if (sniffLog.length === 0) {
+                Toast.warning('No frames captured yet');
+                return;
+            }
+            // candump log format - imports directly into SavvyCAN
+            const blob = new Blob([sniffLog.join('\n') + '\n'], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+            a.href = url;
+            a.download = `tincan-capture-${stamp}.log`;
+            a.click();
+            URL.revokeObjectURL(url);
+            log(`Exported ${sniffLog.length} frames`, 'info');
+        }
+
+        async function startSweepFromUi() {
+            if (!isConnected) {
+                Toast.warning('Connect to device first');
+                return;
+            }
+            const gauge = document.getElementById('sweepGauge').value;
+            const from = document.getElementById('sweepFrom').value;
+            const to = document.getElementById('sweepTo').value;
+            const ms = document.getElementById('sweepMs').value;
+            const cycles = document.getElementById('sweepCycles').value;
+            if (from === '' || to === '' || ms === '') {
+                Toast.warning('Fill in from / to / duration');
+                return;
+            }
+            await sendCommand(`SWEEP:${gauge}:${from}:${to}:${ms}:${cycles}`);
+        }
+
+        async function toggleDemo() {
+            if (!isConnected) {
+                Toast.warning('Connect to device first');
+                return;
+            }
+            if (!demoUiOn) {
+                if (await sendCommand('DEMO:ON')) setDemoUi(true);
+            } else {
+                await sendCommand('DEMO:OFF');
+                setDemoUi(false);
+            }
+        }
+
+        function applyDeviceStatus(json) {
+            let status;
+            try {
+                status = JSON.parse(json);
+            } catch (e) {
+                return; // older firmware or partial line - ignore
+            }
+            // Sync mode buttons to what the device is actually doing
+            if (typeof status.sniff === 'boolean') setSniffUi(status.sniff);
+            if (typeof status.demo === 'boolean') setDemoUi(status.demo);
+            if (status.canOk === false) {
+                log('Device reports CAN init FAILED - check MCP2515 wiring', 'error');
+                Toast.error('Device CAN bus not initialized');
             }
         }
 
