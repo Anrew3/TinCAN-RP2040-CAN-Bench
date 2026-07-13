@@ -381,8 +381,9 @@ void TemplateManager::getTemplateFilename(const char* id, char* filename, size_t
 }
 
 bool TemplateManager::parseJsonToTemplate(const char* json, size_t len, Template* t) {
-    // Use ArduinoJson to parse
-    StaticJsonDocument<4096> doc;
+    // Heap-backed so templates larger than the old 4 KB cap (e.g. with a
+    // full signals section) parse without blowing the stack.
+    DynamicJsonDocument doc(MAX_TEMPLATE_SIZE);
 
     DeserializationError error = deserializeJson(doc, json, len);
     if (error) {
@@ -600,11 +601,46 @@ bool TemplateManager::parseJsonToTemplate(const char* json, size_t len, Template
         }
     }
 
+    // Signals (named byte-span overrides on transmitted frames)
+    if (doc.containsKey("signals")) {
+        JsonArray sigs = doc["signals"];
+        t->numSignals = 0;
+        for (JsonObject sig : sigs) {
+            if (t->numSignals >= MAX_SIGNALS) break;
+            SignalDef* s = &t->signals[t->numSignals];
+
+            snprintf(s->name, sizeof(s->name), "%s", (const char*)(sig["name"] | ""));
+            s->canId = strtoul(sig["canId"] | "0x000", nullptr, 0);
+            s->startByte = sig["startByte"] | 0;
+            s->numStates = 0;
+            s->defaultState = 0xFF;
+
+            const char* defName = sig["default"] | "";
+
+            if (sig.containsKey("states")) {
+                JsonObject states = sig["states"];
+                for (JsonPair kv : states) {
+                    if (s->numStates >= MAX_SIGNAL_STATES) break;
+                    SignalStateDef* st = &s->states[s->numStates];
+                    snprintf(st->name, sizeof(st->name), "%s", kv.key().c_str());
+                    String dataStr = kv.value().as<String>();
+                    st->len = parseHexBytes(dataStr.c_str(), st->data, 8);
+                    if (defName[0] && strcasecmp(defName, st->name) == 0) {
+                        s->defaultState = s->numStates;
+                    }
+                    s->numStates++;
+                }
+            }
+
+            t->numSignals++;
+        }
+    }
+
     return true;
 }
 
 void TemplateManager::templateToJson(const Template* t, char* buffer, size_t bufferSize) {
-    StaticJsonDocument<4096> doc;
+    DynamicJsonDocument doc(MAX_TEMPLATE_SIZE);
 
     doc["id"] = t->id;
     doc["name"] = t->name;
@@ -727,6 +763,27 @@ void TemplateManager::templateToJson(const Template* t, char* buffer, size_t buf
             bytesToHexString(t->bootMsgs[i].data, t->bootMsgs[i].len, hexBuf, sizeof(hexBuf));
             msg["data"] = hexBuf;
             msg["delayMs"] = t->bootMsgs[i].delayMs;
+        }
+    }
+
+    // Signals
+    if (t->numSignals > 0) {
+        JsonArray sigs = doc.createNestedArray("signals");
+        for (int i = 0; i < t->numSignals; i++) {
+            const SignalDef* s = &t->signals[i];
+            JsonObject sig = sigs.createNestedObject();
+            sig["name"] = s->name;
+            snprintf(hexBuf, sizeof(hexBuf), "0x%03X", (unsigned int)s->canId);
+            sig["canId"] = hexBuf;
+            sig["startByte"] = s->startByte;
+            JsonObject states = sig.createNestedObject("states");
+            for (int j = 0; j < s->numStates; j++) {
+                bytesToHexString(s->states[j].data, s->states[j].len, hexBuf, sizeof(hexBuf));
+                states[s->states[j].name] = hexBuf;
+            }
+            if (s->defaultState != 0xFF && s->defaultState < s->numStates) {
+                sig["default"] = s->states[s->defaultState].name;
+            }
         }
     }
 

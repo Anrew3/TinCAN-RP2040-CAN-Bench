@@ -5,6 +5,43 @@
 // Number of built-in official templates
 #define NUM_DEFAULT_TEMPLATES 2
 
+// ---- Signal-building helpers (keep the templates readable) ----
+
+static byte dtHexBytes(const char* s, byte* out) {
+    byte n = 0;
+    while (*s && n < 8) {
+        while (*s == ' ') s++;
+        if (!*s) break;
+        char buf[3];
+        buf[0] = s[0];
+        buf[1] = (s[1] && s[1] != ' ') ? s[1] : '\0';
+        buf[2] = '\0';
+        out[n++] = (byte)strtol(buf, nullptr, 16);
+        s++;
+        if (*s && *s != ' ') s++;
+    }
+    return n;
+}
+
+static SignalDef* dtSignal(Template* t, const char* name, unsigned long canId, byte startByte) {
+    SignalDef* s = &t->signals[t->numSignals++];
+    snprintf(s->name, sizeof(s->name), "%s", name);
+    s->canId = canId;
+    s->startByte = startByte;
+    s->numStates = 0;
+    s->defaultState = 0xFF;
+    return s;
+}
+
+static void dtState(SignalDef* s, const char* name, const char* hex, bool isDefault) {
+    if (s->numStates >= MAX_SIGNAL_STATES) return;
+    SignalStateDef* st = &s->states[s->numStates];
+    snprintf(st->name, sizeof(st->name), "%s", name);
+    st->len = dtHexBytes(hex, st->data);
+    if (isDefault) s->defaultState = s->numStates;
+    s->numStates++;
+}
+
 // Initialize the Mustang S550 template
 void initMustangS550Template(Template* t) {
     initTemplate(t);
@@ -161,6 +198,66 @@ void initMustangS550Template(Template* t) {
     t->backgroundMsgs[1].data[7] = 0x00;
     t->backgroundMsgs[1].len = 8;
     t->backgroundMsgs[1].intervalMs = 10;
+
+    // Gear / reverse (0x171, Sync 4). Transmitted continuously so the GEAR
+    // signal below can overlay it; REVERSE needs B0=0x36 & B1=0x32.
+    t->backgroundMsgs[2].canId = 0x171;
+    for (int i = 0; i < 8; i++) t->backgroundMsgs[2].data[i] = 0x00;
+    t->backgroundMsgs[2].len = 8;
+    t->backgroundMsgs[2].intervalMs = 10;
+
+    t->numBackgroundMsgs = 3;
+
+    // ---- Signals (named byte-span overrides on the frames above) ----
+    t->numSignals = 0;
+
+    // Gear selector over 0x171
+    SignalDef* gear = dtSignal(t, "GEAR", 0x171, 0);
+    dtState(gear, "PARK",    "00 00", true);
+    dtState(gear, "REVERSE", "36 32", false);
+    dtState(gear, "NEUTRAL", "00 00", false);
+    dtState(gear, "DRIVE",   "00 00", false);
+
+    // Lighting / body over the 0x3B3 (+0x3B2) frame
+    SignalDef* head = dtSignal(t, "HEADLAMP", 0x3B3, 0);
+    dtState(head, "OFF", "40", true);
+    dtState(head, "ON",  "44", false);
+
+    SignalDef* mode = dtSignal(t, "MODE", 0x3B3, 1);
+    dtState(mode, "DRL",    "48", true);
+    dtState(mode, "NIGHT",  "88", false);
+    dtState(mode, "HAZARD", "4A", false);
+
+    // Backlight is continuous (0x00-0x11); named states are shortcuts.
+    // No default so the base brightness (0x10) is left untouched.
+    SignalDef* bl = dtSignal(t, "BACKLIGHT", 0x3B3, 3);
+    dtState(bl, "OFF",     "00", false);
+    dtState(bl, "MYCOLOR", "0A", false);
+    dtState(bl, "MAX",     "11", false);
+
+    SignalDef* dn = dtSignal(t, "DAYNIGHT", 0x3B3, 5);
+    dtState(dn, "DAY",   "00", true);
+    dtState(dn, "NIGHT", "50", false);
+
+    // Doors + hood share byte 7 (hood-closed 0x02 kept in door states)
+    SignalDef* doors = dtSignal(t, "DOORS", 0x3B3, 7);
+    dtState(doors, "CLOSED",    "02", true);
+    dtState(doors, "PASSENGER", "12", false);
+    dtState(doors, "DRIVER",    "22", false);
+    dtState(doors, "BOTH",      "32", false);
+    dtState(doors, "HOODOPEN",  "0A", false);
+
+    // Warning lights over the 0x416 frame
+    SignalDef* abs = dtSignal(t, "ABS", 0x416, 6);
+    dtState(abs, "OFF",   "00", true);
+    dtState(abs, "SOLID", "40", false);
+    dtState(abs, "SLOW",  "80", false);
+    dtState(abs, "FAST",  "D0", false);
+
+    SignalDef* trac = dtSignal(t, "TRACTION", 0x416, 5);
+    dtState(trac, "OFF",   "00", true);
+    dtState(trac, "SOLID", "02", false);
+    dtState(trac, "FLASH", "0F", false);
 }
 
 // Initialize the F-150 13th Gen template

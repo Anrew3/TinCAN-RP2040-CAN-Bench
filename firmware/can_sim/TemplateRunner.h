@@ -24,6 +24,10 @@ public:
     // (Re)play the template's one-shot boot message sequence
     void startBootSequence();
 
+    // Set a signal to a named state or (for numeric controls) a raw byte
+    // value. Returns false if the template has no signal by that name.
+    bool setSignal(const char* name, const char* value);
+
     // Get current state
     int getRPM() { return currentRPM; }
     int getSpeed() { return currentSpeed; }
@@ -57,6 +61,17 @@ private:
     byte bootIndex;
     unsigned long bootNextTime;
 
+    // Runtime signal overrides (byte spans overlaid on outgoing frames).
+    // Slot i corresponds to tmpl->signals[i].
+    struct SignalOverride {
+        bool used;
+        unsigned long canId;
+        byte startByte;
+        byte data[8];
+        byte len;
+    };
+    SignalOverride sigOverrides[MAX_SIGNALS];
+
     // Timing
     unsigned long lastButtonTime;
     unsigned long lastGaugeTimes[MAX_GAUGES];
@@ -67,6 +82,9 @@ private:
     unsigned long lastBackgroundTimes[MAX_BACKGROUND_MSGS];
 
     // Internal methods
+    void sendFrame(unsigned long canId, byte ext, byte len, const byte* data);
+    void applyOverrides(unsigned long canId, byte* data, byte len);
+    void applySignalDefaults();
     void prepareVINMessages();
     void handleButtonCommand(const String& buttonName);
     void sendButtonMessage();

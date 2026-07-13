@@ -122,18 +122,38 @@ From `canbus_codes.txt` / `can_sim` firmware. IDs used by model traffic:
 
 ---
 
-## Discrepancies between firmware and notes (verify on hardware)
+## Implementation status (firmware v2.1.0+)
 
-| ID | Firmware | Notes | Notes |
-|----|----------|-------|-------|
-| `0x202` speed scale | `mph × 159` | `mph × 175` | Different scaling factor — confirm which is correct for S650 |
-| `0x109` last byte | `...00 28` | `...00 24` | Byte 7 differs; notes also add "Byte 2 controls gear (untested)" |
+As of v2.1.0 the notes' extra decodes are implemented through the template
+**signals** system — named multi-state controls that overlay a byte span onto
+an already-transmitted frame, set at runtime with `SIGNAL:<name>:<state>` (or a
+raw number for continuous controls like backlight). The Ford templates ship
+these signals; any template can define its own.
+
+| Feature | CAN ID / byte | Signal / command | Status |
+|---------|---------------|------------------|--------|
+| Reverse / gear | `0x171` B0/B1 (`36 32`) | `GEAR:R` (gear selector) | ✅ implemented (0x171 now transmitted) |
+| ABS light | `0x416` B6 | `SIGNAL:ABS:OFF\|SOLID\|SLOW\|FAST` | ✅ implemented |
+| Traction light | `0x416` B5 | `SIGNAL:TRACTION:OFF\|SOLID\|FLASH` | ✅ implemented |
+| Headlamp | `0x3B2/3` B0 | `SIGNAL:HEADLAMP:OFF\|ON` | ✅ implemented |
+| DRL / night / hazard | `0x3B2/3` B1 | `SIGNAL:MODE:DRL\|NIGHT\|HAZARD` | ✅ implemented |
+| Backlight / brightness | `0x3B2/3` B3 | `SIGNAL:BACKLIGHT:<0-17>` | ✅ implemented (slider in UI) |
+| Day / night dimming | `0x3B2/3` B5 | `SIGNAL:DAYNIGHT:DAY\|NIGHT` | ✅ implemented |
+| Doors / hood | `0x3B2/3` B7 | `SIGNAL:DOORS:CLOSED\|PASSENGER\|DRIVER\|BOTH\|HOODOPEN` | ✅ implemented |
+| Turn signals | `0x3B2/3` B4/B6 | `BLINKER:LEFT\|RIGHT\|BOTH\|OFF` | ✅ (pre-existing) |
+| Speed scale | `0x202` B6/7 | gauge `scale` field (editable in template) | ✅ customizable per template |
+
+## Remaining discrepancies (verify on hardware)
+
+| ID | Firmware default | Notes | Note |
+|----|------------------|-------|------|
+| `0x202` speed scale | `mph × 159` | `mph × 175` | Now a template field — set per vehicle once confirmed on hardware |
+| `0x109` last byte | `...00 28` | `...00 24` | Byte 7 left as firmware default (`28`) by request; adjust in the template if `24` proves correct |
 | `0x3B5` byte map | B1=DF, B3=PF, B5=PR, B7=DR | B1=FL, B3=FR, B5=RR, B7=RL | Same byte positions, corner-naming differs (PR vs RR, DR vs RL) |
-| `0x3B2/3` | turn signals only | full decode (backlight, doors, day/night, headlamp) | Notes are far more complete; firmware only implements turn signals |
-| `0x171` | not present | Reverse / Sync 4 | Missing from firmware entirely |
 
 ---
 
-*Generated from software analysis + 3 handwritten note photos. `0x171`, the `0x3B2/3`
-sub-fields (backlight, doors, day/night, headlamp), and the ABS/traction decode of `0x416`
-are documented **only** in the notes and are not yet implemented in the firmware.*
+*Generated from software analysis + 3 handwritten note photos. The `0x171`
+reverse frame, the `0x3B2/3` sub-fields (backlight, doors, day/night, headlamp,
+mode), and the `0x416` ABS/traction decode are now implemented as template
+signals; only the value discrepancies above remain to confirm on hardware.*
