@@ -128,6 +128,80 @@
       "data": "50 00 FE 00 01 00 00 00",
       "intervalMs": 10,
       "description": "ABS/Traction control status"
+    },
+    {
+      "canId": "0x171",
+      "data": "00 00 00 00 00 00 00 00",
+      "intervalMs": 10,
+      "description": "Gear / reverse (Sync 4) - overlaid by GEAR signal"
+    }
+  ],
+  "signals": [
+    {
+      "name": "GEAR",
+      "canId": "0x171",
+      "startByte": 0,
+      "default": "PARK",
+      "states": { "PARK": "00 00", "REVERSE": "36 32", "NEUTRAL": "00 00", "DRIVE": "00 00" },
+      "description": "Gear selector; REVERSE sets 0x171 B0/B1"
+    },
+    {
+      "name": "HEADLAMP",
+      "canId": "0x3B3",
+      "startByte": 0,
+      "default": "OFF",
+      "states": { "OFF": "40", "ON": "44" },
+      "description": "0x3B2/3 B0 headlamp"
+    },
+    {
+      "name": "MODE",
+      "canId": "0x3B3",
+      "startByte": 1,
+      "default": "DRL",
+      "states": { "DRL": "48", "NIGHT": "88", "HAZARD": "4A" },
+      "description": "0x3B2/3 B1 DRL/night/hazard"
+    },
+    {
+      "name": "BACKLIGHT",
+      "canId": "0x3B3",
+      "startByte": 3,
+      "numeric": true,
+      "min": 0,
+      "max": 17,
+      "states": { "OFF": "00", "MYCOLOR": "0A", "MAX": "11" },
+      "description": "0x3B2/3 B3 cluster/display brightness (0-17)"
+    },
+    {
+      "name": "DAYNIGHT",
+      "canId": "0x3B3",
+      "startByte": 5,
+      "default": "DAY",
+      "states": { "DAY": "00", "NIGHT": "50" },
+      "description": "0x3B2/3 B5 day/night dimming"
+    },
+    {
+      "name": "DOORS",
+      "canId": "0x3B3",
+      "startByte": 7,
+      "default": "CLOSED",
+      "states": { "CLOSED": "02", "PASSENGER": "12", "DRIVER": "22", "BOTH": "32", "HOODOPEN": "0A" },
+      "description": "0x3B2/3 B7 doors + hood"
+    },
+    {
+      "name": "ABS",
+      "canId": "0x416",
+      "startByte": 6,
+      "default": "OFF",
+      "states": { "OFF": "00", "SOLID": "40", "SLOW": "80", "FAST": "D0" },
+      "description": "0x416 B6 ABS warning light"
+    },
+    {
+      "name": "TRACTION",
+      "canId": "0x416",
+      "startByte": 5,
+      "default": "OFF",
+      "states": { "OFF": "00", "SOLID": "02", "FLASH": "0F" },
+      "description": "0x416 B5 traction control light"
     }
   ]
 }

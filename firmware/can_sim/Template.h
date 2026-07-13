@@ -54,6 +54,27 @@ struct BackgroundMsgDef {
     unsigned long intervalMs;
 };
 
+// Signal - a named, multi-state control that overlays a byte span onto an
+// already-transmitted CAN frame. Fully template-defined so any indicator
+// (warning lights, headlamp, day/night, doors, gear, backlight, ...) can be
+// added without firmware changes. Each state writes `len` bytes starting at
+// `startByte`. A SIGNAL:<name>:<n> command with a numeric value writes a
+// single raw byte instead, for continuous controls like backlight.
+struct SignalStateDef {
+    char name[16];
+    byte data[8];
+    byte len;
+};
+
+struct SignalDef {
+    char name[16];
+    unsigned long canId;    // must be a frame the runner already transmits
+    byte startByte;
+    SignalStateDef states[MAX_SIGNAL_STATES];
+    byte numStates;
+    byte defaultState;      // index into states, or 0xFF for none
+};
+
 // Boot message - sent once at power-up / template load, in order.
 // delayMs is the wait before this message is sent (relative to the
 // previous one), so a sequence can pace a head unit's init handshake.
@@ -118,6 +139,10 @@ struct Template {
     // Boot sequence (one-shot, in order, at power-up / template load)
     BootMsgDef bootMsgs[MAX_BOOT_MSGS];
     byte numBootMsgs;
+
+    // Signals (named byte-span overrides on transmitted frames)
+    SignalDef signals[MAX_SIGNALS];
+    byte numSignals;
 };
 
 // Helper to initialize a template to defaults

@@ -62,6 +62,38 @@ then `TEMPLATE_UPLOAD_END`. On success: `TEMPLATE_UPLOAD_OK`. On CRC failure:
 `TEMP:OIL:<F>`, `TPMS:<tire>:<psi>`, `BLINKER:LEFT|RIGHT|BOTH|OFF`, `VIN:<17 chars>`,
 button names (`UP`/`DOWN`/`LEFT`/`RIGHT`/`OK`/`SETTINGS`).
 
+Gauge output scaling (e.g. speed `mph × 159`), min/max, and offset are template
+fields (`scale`, `offset`, `min`, `max`) and editable in the web Template Editor.
+
+### Signals (indicators, lighting, gear, ...)
+
+A **signal** is a named, multi-state control that overlays a byte span onto a
+frame the template already transmits — warning lights, headlamp, day/night,
+doors, gear, backlight, etc. Fully template-defined, so new indicators need no
+firmware change.
+
+| Command | Description |
+|---------|-------------|
+| `SIGNAL:<name>:<state>` | Set a signal to a named state (e.g. `SIGNAL:ABS:FLASH`) |
+| `SIGNAL:<name>:<number>` | Set a raw byte value for continuous controls (e.g. `SIGNAL:BACKLIGHT:12`) |
+| `GEAR:<P\|R\|N\|D>` | Shorthand for the `GEAR` signal (reverse drives `0x171`) |
+
+The Ford templates ship: `GEAR`, `HEADLAMP`, `MODE` (DRL/night/hazard),
+`BACKLIGHT`, `DAYNIGHT`, `DOORS`, `ABS`, `TRACTION`. Each signal's `canId` must
+be a frame the template transmits (a gauge, the blinker/body frame, or a
+background message). Example:
+
+```json
+"signals": [
+  { "name": "ABS", "canId": "0x416", "startByte": 6,
+    "default": "OFF",
+    "states": { "OFF": "00", "SOLID": "40", "SLOW": "80", "FAST": "D0" } },
+  { "name": "GEAR", "canId": "0x171", "startByte": 0,
+    "default": "PARK",
+    "states": { "PARK": "00 00", "REVERSE": "36 32", "NEUTRAL": "00 00", "DRIVE": "00 00" } }
+]
+```
+
 ### Simulation
 
 | Command | Description |

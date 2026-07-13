@@ -13,9 +13,11 @@
 
 // Template Settings
 #define MAX_TEMPLATES 10
-#define MAX_TEMPLATE_SIZE 4096
+#define MAX_TEMPLATE_SIZE 8192
 #define MAX_CUSTOM_CAN 10
 #define MAX_SWEEPS 4
+#define MAX_SIGNALS 12
+#define MAX_SIGNAL_STATES 6
 #define MAX_BUTTONS 10
 #define MAX_GAUGES 6
 #define MAX_TEMP_SENSORS 4

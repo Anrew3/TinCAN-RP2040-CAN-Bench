@@ -34,6 +34,8 @@ TemplateRunner::TemplateRunner() {
     bootIndex = 0;
     bootNextTime = 0;
 
+    for (int i = 0; i < MAX_SIGNALS; i++) sigOverrides[i].used = false;
+
     lastButtonTime = 0;
     memset(lastGaugeTimes, 0, sizeof(lastGaugeTimes));
     lastTempTime = 0;
@@ -54,8 +56,90 @@ void TemplateRunner::setTemplate(Template* t) {
     if (tmpl) {
         memcpy(currentTempMessage, tmpl->tempBase, 8);
         prepareVINMessages();
+        applySignalDefaults();
         startBootSequence();
     }
+}
+
+// ---- Signal / byte-override engine ----
+
+void TemplateRunner::applySignalDefaults() {
+    for (int i = 0; i < MAX_SIGNALS; i++) sigOverrides[i].used = false;
+    if (!tmpl) return;
+
+    for (int i = 0; i < tmpl->numSignals && i < MAX_SIGNALS; i++) {
+        SignalDef* s = &tmpl->signals[i];
+        if (s->defaultState == 0xFF || s->defaultState >= s->numStates) continue;
+        SignalStateDef* st = &s->states[s->defaultState];
+        sigOverrides[i].used = true;
+        sigOverrides[i].canId = s->canId;
+        sigOverrides[i].startByte = s->startByte;
+        sigOverrides[i].len = st->len;
+        memcpy(sigOverrides[i].data, st->data, 8);
+    }
+}
+
+void TemplateRunner::applyOverrides(unsigned long canId, byte* data, byte len) {
+    for (int i = 0; i < MAX_SIGNALS; i++) {
+        SignalOverride* o = &sigOverrides[i];
+        if (!o->used || o->canId != canId) continue;
+        for (int b = 0; b < o->len; b++) {
+            byte idx = o->startByte + b;
+            if (idx < len) data[idx] = o->data[b];
+        }
+    }
+}
+
+void TemplateRunner::sendFrame(unsigned long canId, byte ext, byte len, const byte* data) {
+    if (!canBus) return;
+    byte buf[8];
+    byte n = len > 8 ? 8 : len;
+    memcpy(buf, data, n);
+    applyOverrides(canId, buf, n);
+    canBus->sendMsgBuf(canId, ext, n, buf);
+}
+
+bool TemplateRunner::setSignal(const char* name, const char* value) {
+    if (!tmpl) return false;
+
+    int sigIndex = -1;
+    for (int i = 0; i < tmpl->numSignals && i < MAX_SIGNALS; i++) {
+        if (strcasecmp(tmpl->signals[i].name, name) == 0) { sigIndex = i; break; }
+    }
+    if (sigIndex < 0) return false;
+
+    SignalDef* s = &tmpl->signals[sigIndex];
+    SignalOverride* o = &sigOverrides[sigIndex];
+    o->canId = s->canId;
+    o->startByte = s->startByte;
+
+    // Named state?
+    for (int i = 0; i < s->numStates; i++) {
+        if (strcasecmp(s->states[i].name, value) == 0) {
+            o->len = s->states[i].len;
+            memcpy(o->data, s->states[i].data, 8);
+            o->used = true;
+            if (Serial && !g_quietSet) {
+                Serial.print("[Signal] ");
+                Serial.print(s->name);
+                Serial.print(" = ");
+                Serial.println(s->states[i].name);
+            }
+            return true;
+        }
+    }
+
+    // Otherwise treat as a raw numeric byte (e.g. backlight level)
+    o->len = 1;
+    o->data[0] = (byte)(strtol(value, nullptr, 0) & 0xFF);
+    o->used = true;
+    if (Serial && !g_quietSet) {
+        Serial.print("[Signal] ");
+        Serial.print(s->name);
+        Serial.print(" = 0x");
+        Serial.println(o->data[0], HEX);
+    }
+    return true;
 }
 
 void TemplateRunner::startBootSequence() {
@@ -138,6 +222,25 @@ void TemplateRunner::handleCommand(String* tokens, int count) {
 
     String cmd = tokens[0];
     cmd.toUpperCase();
+
+    // SIGNAL:<name>:<state|value> - set a template-defined signal
+    if (cmd == "SIGNAL" && count >= 3) {
+        if (!setSignal(tokens[1].c_str(), tokens[2].c_str())) {
+            if (Serial) {
+                Serial.print("[Runner] Unknown signal: ");
+                Serial.println(tokens[1]);
+            }
+        }
+        return;
+    }
+
+    // GEAR:<state> - shorthand for SIGNAL:GEAR:<state>
+    if (cmd == "GEAR" && count >= 2) {
+        if (!setSignal("GEAR", tokens[1].c_str())) {
+            if (Serial) Serial.println("[Runner] No GEAR signal in this template");
+        }
+        return;
+    }
 
     // Check if it's a gauge command
     GaugeDef* gauge = findGauge(tmpl, cmd.c_str());
@@ -317,18 +420,17 @@ void TemplateRunner::handleButtonCommand(const String& buttonName) {
 void TemplateRunner::sendButtonMessage() {
     if (!canBus || !tmpl) return;
 
-    byte status = canBus->sendMsgBuf(tmpl->buttonCanId, 0, 8, currentButtonData);
+    sendFrame(tmpl->buttonCanId, 0, 8, currentButtonData);
 
     if (Serial && g_verboseSerial && canLog(millis())) {
-        Serial.print("[Runner] Button msg sent, status=");
-        Serial.println(status == CAN_OK ? "OK" : "ERR");
+        Serial.println("[Runner] Button msg sent");
     }
 }
 
 void TemplateRunner::sendDefaultMessage() {
     if (!canBus || !tmpl) return;
 
-    canBus->sendMsgBuf(tmpl->buttonCanId, 0, 8, tmpl->buttonDefault);
+    sendFrame(tmpl->buttonCanId, 0, 8, tmpl->buttonDefault);
 }
 
 void TemplateRunner::sendGaugeMessage(int gaugeIndex) {
@@ -352,20 +454,19 @@ void TemplateRunner::sendGaugeMessage(int gaugeIndex) {
         msg[gauge->valueBytes[0]] = scaledValue & 0xFF;
     }
 
-    byte status = canBus->sendMsgBuf(gauge->canId, 0, 8, msg);
+    sendFrame(gauge->canId, 0, 8, msg);
 
     if (Serial && g_verboseSerial && canLog(millis())) {
         Serial.print("[Runner] ");
         Serial.print(gauge->name);
-        Serial.print(" msg sent, status=");
-        Serial.println(status == CAN_OK ? "OK" : "ERR");
+        Serial.println(" msg sent");
     }
 }
 
 void TemplateRunner::sendTemperatureMessage() {
     if (!canBus || !tmpl) return;
 
-    canBus->sendMsgBuf(tmpl->tempCanId, 0, 8, currentTempMessage);
+    sendFrame(tmpl->tempCanId, 0, 8, currentTempMessage);
 }
 
 void TemplateRunner::sendTirePressureMessage() {
@@ -380,14 +481,14 @@ void TemplateRunner::sendTirePressureMessage() {
         msg[tmpl->tires[i].byteIndex] = (byte)(kpa & 0xFF);
     }
 
-    canBus->sendMsgBuf(tmpl->tpmsCanId, 0, 8, msg);
+    sendFrame(tmpl->tpmsCanId, 0, 8, msg);
 }
 
 void TemplateRunner::sendVINMessages() {
     if (!canBus || !tmpl) return;
 
     for (int i = 0; i < 3; i++) {
-        canBus->sendMsgBuf(tmpl->vinCanId, 0, 8, vinMessages[i]);
+        sendFrame(tmpl->vinCanId, 0, 8, vinMessages[i]);
     }
 }
 
@@ -417,6 +518,14 @@ void TemplateRunner::sendBlinkerMessages(unsigned long now) {
         }
     }
 
+    // 0x3B2/0x3B3 carry the same lighting/body payload; apply signal
+    // overrides for both IDs so the mirrors stay identical, then send once
+    // to each (raw, since overrides are already baked into msg).
+    applyOverrides(tmpl->blinkerCanId, msg, 8);
+    if (tmpl->blinkerCanIdAlt != 0 && tmpl->blinkerCanIdAlt != tmpl->blinkerCanId) {
+        applyOverrides(tmpl->blinkerCanIdAlt, msg, 8);
+    }
+
     canBus->sendMsgBuf(tmpl->blinkerCanId, 0, 8, msg);
 
     if (tmpl->blinkerCanIdAlt != 0 && tmpl->blinkerCanIdAlt != tmpl->blinkerCanId) {
@@ -428,5 +537,5 @@ void TemplateRunner::sendBackgroundMessage(int index) {
     if (!canBus || !tmpl || index >= tmpl->numBackgroundMsgs) return;
 
     BackgroundMsgDef* bg = &tmpl->backgroundMsgs[index];
-    canBus->sendMsgBuf(bg->canId, 0, bg->len, bg->data);
+    sendFrame(bg->canId, 0, bg->len, bg->data);
 }

@@ -306,6 +306,50 @@
         },
         "required": ["canId", "data"]
       }
+    },
+    "signals": {
+      "type": "array",
+      "description": "Named multi-state controls that overlay a byte span onto an already-transmitted frame (warning lights, headlamp, day/night, doors, gear, backlight, ...). Set at runtime with SIGNAL:<name>:<state|number>. The target canId must be a frame the template already transmits (a gauge, blinker/body, or background message). Max 12 signals, 6 states each.",
+      "maxItems": 12,
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Signal name used in SIGNAL:<name>:... (e.g. ABS, HEADLAMP, GEAR)"
+          },
+          "canId": {
+            "type": "string",
+            "pattern": "^0x[0-9A-Fa-f]+$"
+          },
+          "startByte": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 7,
+            "description": "First byte written by each state"
+          },
+          "states": {
+            "type": "object",
+            "description": "State name -> hex byte(s) written at startByte",
+            "additionalProperties": {
+              "type": "string",
+              "pattern": "^([0-9A-Fa-f]{2}\\s?)+$"
+            }
+          },
+          "default": {
+            "type": "string",
+            "description": "State applied on template load (optional)"
+          },
+          "numeric": {
+            "type": "boolean",
+            "description": "Hint to the UI that this control also accepts a raw numeric byte (e.g. backlight level)"
+          },
+          "min": { "type": "integer" },
+          "max": { "type": "integer" },
+          "description": { "type": "string" }
+        },
+        "required": ["name", "canId", "startByte", "states"]
+      }
     }
   },
   "$defs": {
