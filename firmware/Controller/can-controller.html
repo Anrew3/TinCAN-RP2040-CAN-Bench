@@ -1515,6 +1515,15 @@
             display: contents;
         }
 
+        /* ABS + Traction: own full-width row at the bottom */
+        .signal-subrow {
+            flex: 0 0 100%;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-start;
+            gap: 14px 22px;
+        }
+
         .signal-group {
             display: flex;
             flex-direction: column;
@@ -4877,13 +4886,15 @@
             NIGHT:     '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
             DRL:       '<circle cx="12" cy="12" r="4"/><path d="M12 4h.01"/><path d="M20 12h.01"/><path d="M12 20h.01"/><path d="M4 12h.01"/><path d="M17.66 6.34h.01"/><path d="M17.66 17.66h.01"/><path d="M6.34 17.66h.01"/><path d="M6.34 6.34h.01"/>',
             HAZARD:    '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
-            // Doors: closed door, open door (passenger), mirrored open door
-            // (driver), both doors open, and a raised-hood car for the hood.
-            CLOSED:    '<path d="M18 20V6a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v14"/><path d="M2 20h20"/><path d="M14 12h.01"/>',
-            PASSENGER: '<path d="M13 4h3a2 2 0 0 1 2 2v14"/><path d="M2 20h3"/><path d="M13 20h9"/><path d="M10 12v.01"/><path d="M13 4.56v16.16a1 1 0 0 1-1.24.97L5 20V5.56a2 2 0 0 1 1.51-1.94l4-1A2 2 0 0 1 13 4.56Z"/>',
-            DRIVER:    '<g transform="translate(24 0) scale(-1 1)"><path d="M13 4h3a2 2 0 0 1 2 2v14"/><path d="M2 20h3"/><path d="M13 20h9"/><path d="M10 12v.01"/><path d="M13 4.56v16.16a1 1 0 0 1-1.24.97L5 20V5.56a2 2 0 0 1 1.51-1.94l4-1A2 2 0 0 1 13 4.56Z"/></g>',
-            BOTH:      '<rect x="8.5" y="3" width="7" height="18" rx="2"/><path d="M8.5 8 3 6.5"/><path d="M8.5 15 3 16.5"/><path d="M15.5 8 21 6.5"/><path d="M15.5 15 21 16.5"/>',
-            HOODOPEN:  '<path d="M2 17h20"/><path d="M3 17v-2.5a2 2 0 0 1 .4-1.2l1.9-2.5a2 2 0 0 1 1.6-.8h5.6a2 2 0 0 1 1.3.5l3.3 2.8a2 2 0 0 0 .9.4l1.7.3a2 2 0 0 1 1 .5"/><path d="M6 8.5 12 6l6 3.2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/>',
+            // Doors use the classic top-down "door ajar" metaphor: a car
+            // body with a door seam flush (closed) or a line swung out to
+            // the side (open). Driver = left, passenger = right. Hood is
+            // the same body with the front panel raised.
+            CLOSED:    '<rect x="7" y="3" width="10" height="18" rx="3"/><path d="M7 10v4"/><path d="M17 10v4"/>',
+            PASSENGER: '<rect x="7" y="3" width="10" height="18" rx="3"/><path d="M7 10v4"/><path d="M17 11h4.5"/>',
+            DRIVER:    '<rect x="7" y="3" width="10" height="18" rx="3"/><path d="M2.5 11H7"/><path d="M17 10v4"/>',
+            BOTH:      '<rect x="7" y="3" width="10" height="18" rx="3"/><path d="M2.5 11H7"/><path d="M17 11h4.5"/>',
+            HOODOPEN:  '<rect x="7" y="9" width="10" height="12" rx="3"/><path d="M8 9V5a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v4"/>',
             MYCOLOR:   '<circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.93 0 1.65-.75 1.65-1.69 0-.44-.18-.84-.44-1.13-.29-.28-.44-.65-.44-1.12a1.64 1.64 0 0 1 1.67-1.67h2c3.05 0 5.55-2.5 5.56-5.55C21.97 6.01 17.46 2 12 2z"/>',
             MAX:       '<circle cx="12" cy="12" r="5"/><path d="M12 1v3"/><path d="M12 20v3"/><path d="m3.9 3.9 2.2 2.2"/><path d="m17.9 17.9 2.2 2.2"/><path d="M1 12h3"/><path d="M20 12h3"/><path d="m5.9 17.9-2 2.2"/><path d="m20.1 3.9-2.2 2.2"/>',
         };
@@ -4906,12 +4917,16 @@
             return String(s).charAt(0).toUpperCase() + String(s).slice(1).toLowerCase();
         }
 
+        // Warning-light signals kept together on their own bottom row
+        const SIG_WARNING_GROUP = new Set(['ABS', 'TRACTION']);
+
         function renderSignalControls() {
             const host = document.getElementById('signalControls');
             const signals = (templates[currentTemplateId]?.signals || [])
                 .filter(s => s.name && s.name.toUpperCase() !== 'GEAR');
 
             host.innerHTML = '';
+            const warningGroups = [];
 
             signals.forEach(sig => {
                 const group = document.createElement('div');
@@ -4972,8 +4987,20 @@
                     group.appendChild(rowEl);
                 }
 
-                host.appendChild(group);
+                if (SIG_WARNING_GROUP.has(sig.name.toUpperCase())) {
+                    warningGroups.push(group);
+                } else {
+                    host.appendChild(group);
+                }
             });
+
+            // ABS + Traction share a dedicated full-width row at the bottom
+            if (warningGroups.length) {
+                const sub = document.createElement('div');
+                sub.className = 'signal-subrow';
+                warningGroups.forEach(g => sub.appendChild(g));
+                host.appendChild(sub);
+            }
         }
 
         function sendSignal(name, value) {
