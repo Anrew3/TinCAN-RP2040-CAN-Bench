@@ -1041,7 +1041,7 @@
             position: absolute;
             left: 4px;
             right: 4px;
-            height: 32px;
+            height: 28px;
             background: var(--primary);
             border-radius: 6px;
             transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
@@ -1049,13 +1049,13 @@
         }
 
         .gear-selector[data-gear="P"]::before { transform: translateY(0); }
-        .gear-selector[data-gear="R"]::before { transform: translateY(36px); }
-        .gear-selector[data-gear="N"]::before { transform: translateY(72px); }
-        .gear-selector[data-gear="D"]::before { transform: translateY(108px); }
+        .gear-selector[data-gear="R"]::before { transform: translateY(32px); }
+        .gear-selector[data-gear="N"]::before { transform: translateY(64px); }
+        .gear-selector[data-gear="D"]::before { transform: translateY(96px); }
 
         .gear-btn {
-            width: 48px;
-            height: 32px;
+            width: 42px;
+            height: 28px;
             background: transparent;
             border: none;
             border-radius: 6px;
@@ -1077,13 +1077,36 @@
             color: white;
         }
 
-        /* Controls Row - Gear + D-Pad */
+        /* Controls + Lighting side-by-side row */
+        .controls-lighting-row {
+            display: grid;
+            grid-template-columns: minmax(300px, 340px) 1fr;
+            gap: 16px;
+            align-items: stretch;
+        }
+
+        .controls-lighting-row.no-signals {
+            grid-template-columns: 1fr;
+        }
+
+        .controls-lighting-row > .card {
+            margin: 0;
+            min-width: 0;
+        }
+
+        @media (max-width: 900px) {
+            .controls-lighting-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Controls Row - Gear + D-Pad (compact) */
         .controls-row {
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 40px;
-            padding: 16px;
+            gap: 20px;
+            padding: 4px;
         }
 
         .dpad-container {
@@ -1171,9 +1194,9 @@
         /* Large D-Pad */
         .dpad {
             display: grid;
-            grid-template-columns: 52px 64px 52px;
-            grid-template-rows: 52px 64px 52px auto;
-            gap: 6px;
+            grid-template-columns: 42px 50px 42px;
+            grid-template-rows: 42px 50px 42px auto;
+            gap: 5px;
             place-items: center;
         }
 
@@ -1192,8 +1215,8 @@
         }
 
         .dpad-btn svg {
-            width: 22px;
-            height: 22px;
+            width: 20px;
+            height: 20px;
         }
 
         .dpad-btn:hover {
@@ -1257,13 +1280,13 @@
             grid-column: 1 / 4;
             grid-row: 4;
             width: 100%;
-            max-width: 120px;
-            height: 36px;
+            max-width: 110px;
+            height: 30px;
             border-radius: var(--radius-sm);
-            margin-top: 8px;
+            margin-top: 6px;
             justify-self: center;
             gap: 6px;
-            font-size: 12px;
+            font-size: 11px;
         }
 
         .dpad-menu svg {
@@ -1481,35 +1504,37 @@
         .gauge-edit-row input[data-field="canId"] { width: 72px; }
         .gauge-edit-row input:focus { border-color: var(--primary); }
 
-        /* Template signal controls (Lighting & Body) */
-        .signal-row {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 10px;
-            flex-wrap: wrap;
+        /* Template signal controls (Lighting & Body) - compact grid */
+        #signalControls {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 8px 12px;
         }
 
-        .signal-row:last-child { margin-bottom: 0; }
+        .signal-row {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
 
         .signal-name {
-            font-size: 11px;
-            font-weight: 600;
+            font-size: 9px;
+            font-weight: 700;
             color: var(--text-muted);
             text-transform: uppercase;
-            letter-spacing: 0.03em;
-            min-width: 72px;
+            letter-spacing: 0.04em;
         }
 
         .signal-states {
             display: flex;
-            gap: 4px;
+            gap: 3px;
             flex-wrap: wrap;
         }
 
         .signal-state-btn {
-            padding: 4px 10px;
-            font-size: 12px;
+            padding: 3px 7px;
+            font-size: 11px;
+            font-weight: 600;
             border: 1px solid var(--border-color);
             border-radius: var(--radius-sm);
             background: var(--bg-elevated);
@@ -1528,15 +1553,15 @@
 
         .signal-slider {
             flex: 1;
-            min-width: 110px;
+            min-width: 70px;
             accent-color: var(--primary);
         }
 
         .signal-slider-val {
             font-family: 'SF Mono', 'Monaco', monospace;
-            font-size: 12px;
+            font-size: 11px;
             color: var(--text-primary);
-            min-width: 24px;
+            min-width: 20px;
             text-align: right;
         }
 
@@ -3050,6 +3075,8 @@
                 </div>
             </div>
 
+            <!-- Controls + Lighting side by side -->
+            <div class="controls-lighting-row" id="controlsLightingRow">
             <!-- Controls Row: Gear + D-Pad + Custom Buttons -->
             <div class="card">
                 <div class="card-header">
@@ -3098,6 +3125,15 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Lighting & Body (rendered from template signals) -->
+            <div class="card" id="signalsCard" style="display: none;">
+                <div class="card-header">
+                    <span class="card-title">Lighting &amp; Body</span>
+                </div>
+                <div id="signalControls"></div>
+            </div>
+            </div><!-- /controls-lighting-row -->
 
             <!-- TPMS Card -->
             <div class="card">
@@ -3211,14 +3247,6 @@
                         <span>Right</span>
                     </button>
                 </div>
-            </div>
-
-            <!-- Lighting & Body (rendered from template signals) -->
-            <div class="card" id="signalsCard" style="display: none;">
-                <div class="card-header">
-                    <span class="card-title">Lighting &amp; Body</span>
-                </div>
-                <div id="signalControls"></div>
             </div>
 
             <!-- Quick Actions -->
@@ -4786,15 +4814,18 @@
         function renderSignalControls() {
             const card = document.getElementById('signalsCard');
             const host = document.getElementById('signalControls');
+            const row = document.getElementById('controlsLightingRow');
             const signals = (templates[currentTemplateId]?.signals || [])
                 .filter(s => s.name && s.name.toUpperCase() !== 'GEAR');
 
             host.innerHTML = '';
             if (signals.length === 0) {
                 card.style.display = 'none';
+                row?.classList.add('no-signals');
                 return;
             }
             card.style.display = 'block';
+            row?.classList.remove('no-signals');
 
             signals.forEach(sig => {
                 const row = document.createElement('div');
