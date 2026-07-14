@@ -3098,17 +3098,17 @@
                     <div class="dpad-container">
                         <div class="control-title">Steering Wheel</div>
                         <div class="dpad">
-                            <button class="dpad-btn dpad-up" data-command="UP">
+                            <button class="dpad-btn dpad-up" data-command="UP" aria-label="Up">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m18 15-6-6-6 6"/></svg>
                             </button>
-                            <button class="dpad-btn dpad-left" data-command="LEFT">
+                            <button class="dpad-btn dpad-left" data-command="LEFT" aria-label="Left">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m15 18-6-6 6-6"/></svg>
                             </button>
                             <button class="dpad-btn dpad-center" data-command="OK">OK</button>
-                            <button class="dpad-btn dpad-right" data-command="RIGHT">
+                            <button class="dpad-btn dpad-right" data-command="RIGHT" aria-label="Right">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m9 18 6-6-6-6"/></svg>
                             </button>
-                            <button class="dpad-btn dpad-down" data-command="DOWN">
+                            <button class="dpad-btn dpad-down" data-command="DOWN" aria-label="Down">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m6 9 6 6 6-6"/></svg>
                             </button>
                             <button class="dpad-btn dpad-menu" data-command="SETTINGS">
@@ -3897,7 +3897,7 @@
                     transition: transform 0.3s ease;
                     max-width: 320px;
                 `;
-                toast.innerHTML = `<span style="font-size: 16px;">${icon}</span><span>${message}</span>`;
+                toast.innerHTML = `<span style="font-size: 16px;">${icon}</span><span>${esc(message)}</span>`;
 
                 this.container.appendChild(toast);
                 this.activeToasts[key] = toast;
@@ -4013,7 +4013,9 @@
 
         class TemplateEngine {
             constructor(template) {
-                this.template = template;
+                // Tolerate a missing template (first run offline, empty
+                // cache) - command getters guard on absent sections.
+                this.template = template || {};
             }
 
             // Parse hex string to bytes array
@@ -4029,7 +4031,7 @@
             // Generate button CAN command
             getButtonCommand(buttonName) {
                 const btn = this.template.buttons;
-                if (!btn || !btn.commands[buttonName]) return null;
+                if (!btn || !btn.commands?.[buttonName]) return null;
                 const data = btn.commands[buttonName];
                 const count = Math.ceil(btn.holdMs / btn.intervalMs) || 10;
                 return `CAN:${btn.canId} ${data}:${count}:${btn.intervalMs}`;
@@ -4120,14 +4122,23 @@
             // Load built-in templates
             templates = { ...BUILTIN_TEMPLATES };
 
-            // Load custom templates from localStorage
-            const customTemplates = JSON.parse(localStorage.getItem('tincan_templates') || '{}');
+            // Load custom templates from localStorage (corrupt storage
+            // must not kill startup)
+            let customTemplates = {};
+            try {
+                customTemplates = JSON.parse(localStorage.getItem('tincan_templates') || '{}');
+            } catch (e) {
+                console.warn('Ignoring corrupt tincan_templates in localStorage:', e);
+            }
             templates = { ...templates, ...customTemplates };
 
-            // Load last used template
+            // Load last used template; fall back to any available one
             const lastTemplate = localStorage.getItem('tincan_current_template');
             if (lastTemplate && templates[lastTemplate]) {
                 currentTemplateId = lastTemplate;
+            }
+            if (!templates[currentTemplateId]) {
+                currentTemplateId = Object.keys(templates)[0] || currentTemplateId;
             }
 
             currentTemplate = new TemplateEngine(templates[currentTemplateId]);
@@ -4218,8 +4229,8 @@
                 const years = template.vehicle?.years || '';
 
                 btn.innerHTML = `
-                    <span class="vehicle-model">${modelName}</span>
-                    ${years ? `<span class="vehicle-gen">${years}</span>` : ''}
+                    <span class="vehicle-model">${esc(modelName)}</span>
+                    ${years ? `<span class="vehicle-gen">${esc(years)}</span>` : ''}
                 `;
 
                 btn.addEventListener('click', () => {
@@ -4259,8 +4270,8 @@
                 item.className = `template-item${id === editingTemplateId ? ' active' : ''}`;
                 item.innerHTML = `
                     <div class="template-item-info">
-                        <div class="template-item-name">${template.name}</div>
-                        <div class="template-item-meta">${template.vehicle?.make || ''} ${template.vehicle?.model || ''} ${template.vehicle?.years || ''}</div>
+                        <div class="template-item-name">${esc(template.name)}</div>
+                        <div class="template-item-meta">${esc(template.vehicle?.make || '')} ${esc(template.vehicle?.model || '')} ${esc(template.vehicle?.years || '')}</div>
                     </div>
                     <span class="template-item-badge ${isBuiltin ? 'builtin' : 'custom'}">${isBuiltin ? 'Built-in' : 'Custom'}</span>
                 `;
@@ -4448,8 +4459,8 @@
             const timeTitle = kind === 'bg' ? 'Interval (ms)' : 'Delay before this frame (ms)';
             return `
                 <div class="msg-row" data-msgrow="${kind}">
-                    <input type="text" data-f="canId" value="${msg.canId || '0x000'}" placeholder="CAN ID" title="CAN ID (hex)" ${ro}>
-                    <input type="text" data-f="data" value="${msg.data || '00 00 00 00 00 00 00 00'}" placeholder="Data bytes (hex)" title="Up to 8 hex bytes" ${ro}>
+                    <input type="text" data-f="canId" value="${esc(msg.canId || '0x000')}" placeholder="CAN ID" title="CAN ID (hex)" ${ro}>
+                    <input type="text" data-f="data" value="${esc(msg.data || '00 00 00 00 00 00 00 00')}" placeholder="Data bytes (hex)" title="Up to 8 hex bytes" ${ro}>
                     <input type="number" data-f="time" value="${time}" min="0" title="${timeTitle}" ${ro}>
                     ${isBuiltin ? '' : '<button class="msg-remove-btn" data-removerow title="Remove">&times;</button>'}
                 </div>`;
@@ -4711,7 +4722,7 @@
                 el.className = 'custom-can-btn';
                 el.innerHTML = `
                     ${CUSTOM_BTN_ICONS[btn.icon] || CUSTOM_BTN_ICONS.bolt}
-                    <span>${btn.name}</span>
+                    <span>${esc(btn.name)}</span>
                     ${!isBuiltin ? '<button class="delete-btn" data-index="' + index + '">&times;</button>' : ''}
                 `;
                 el.addEventListener('click', (e) => {
@@ -4802,7 +4813,7 @@
                 el.className = 'custom-btn-live';
                 el.innerHTML = `
                     ${CUSTOM_BTN_ICONS[btn.icon] || CUSTOM_BTN_ICONS.bolt}
-                    <span>${btn.name}</span>
+                    <span>${esc(btn.name)}</span>
                 `;
                 el.addEventListener('click', () => sendCustomButtonCan(btn));
                 grid.appendChild(el);
@@ -4830,7 +4841,7 @@
             signals.forEach(sig => {
                 const row = document.createElement('div');
                 row.className = 'signal-row';
-                row.innerHTML = `<span class="signal-name">${sig.name}</span>`;
+                row.innerHTML = `<span class="signal-name">${esc(sig.name)}</span>`;
 
                 const states = document.createElement('div');
                 states.className = 'signal-states';
@@ -4933,12 +4944,36 @@
             consoleOutput = document.getElementById('consoleOutput');
             consoleInput = document.getElementById('consoleInput');
 
-            // Fetch templates from GitHub first
-            await fetchTemplatesFromRepo();
-
-            loadTemplates();
+            // Wire the UI before any network access: a slow or failed
+            // template fetch must never leave the page with dead buttons.
             checkBrowserSupport();
             setupEventListeners();
+
+            // Surface device unplugs instead of silently going stale
+            if ('serial' in navigator) {
+                navigator.serial.addEventListener('disconnect', (e) => {
+                    if (serialPort && e.target === serialPort) {
+                        isConnected = false;
+                        serialPort = null;
+                        currentReader = null;
+                        readLoopPromise = null;
+                        setSniffUi(false);
+                        setDemoUi(false);
+                        updateConnectionUI(false);
+                        log('Device unplugged', 'error');
+                        Toast.warning('Device disconnected');
+                    }
+                });
+            }
+
+            try {
+                await fetchTemplatesFromRepo();
+            } catch (e) {
+                console.warn('Template fetch failed:', e);
+                log('Could not fetch templates (offline?)', 'error');
+            }
+
+            loadTemplates();
             renderLiveCustomButtons();
             checkFirstTimeUser();
             log('TinCAN Controller ready', 'info');
@@ -5698,6 +5733,14 @@
             }
         }
 
+        // Escape template/device-provided text before HTML interpolation -
+        // an imported template with markup in a name must render as text.
+        function esc(s) {
+            return String(s ?? '').replace(/[&<>"']/g, c => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[c]));
+        }
+
         function log(message, type = 'info') {
             const line = document.createElement('div');
             line.className = `console-line ${type}`;
@@ -5856,7 +5899,7 @@
 
             const entry = document.createElement('div');
             entry.className = `firmware-log-entry ${type}`;
-            entry.innerHTML = `<span class="firmware-log-time">${time}</span><span class="firmware-log-message">${message}</span>`;
+            entry.innerHTML = `<span class="firmware-log-time">${time}</span><span class="firmware-log-message">${esc(message)}</span>`;
             logEl.appendChild(entry);
             logEl.scrollTop = logEl.scrollHeight;
 
