@@ -1085,10 +1085,6 @@
             align-items: stretch;
         }
 
-        .controls-lighting-row.no-signals {
-            grid-template-columns: 1fr;
-        }
-
         .controls-lighting-row > .card {
             margin: 0;
             min-width: 0;
@@ -1504,64 +1500,110 @@
         .gauge-edit-row input[data-field="canId"] { width: 72px; }
         .gauge-edit-row input:focus { border-color: var(--primary); }
 
-        /* Template signal controls (Lighting & Body) - compact grid */
-        #signalControls {
+        /* Lighting & Body - icon-button groups (turn-signal style) */
+        .signal-groups {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-            gap: 8px 12px;
+            grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+            gap: 12px 16px;
         }
 
-        .signal-row {
+        /* Dynamic signals join the same grid as the static blinker group */
+        #signalControls {
+            display: contents;
+        }
+
+        .signal-group {
             display: flex;
             flex-direction: column;
-            gap: 4px;
+            gap: 5px;
+            min-width: 0;
         }
 
-        .signal-name {
+        .signal-group-label {
             font-size: 9px;
             font-weight: 700;
             color: var(--text-muted);
             text-transform: uppercase;
-            letter-spacing: 0.04em;
+            letter-spacing: 0.05em;
         }
 
-        .signal-states {
+        .signal-icon-row {
             display: flex;
-            gap: 3px;
+            gap: 4px;
             flex-wrap: wrap;
         }
 
-        .signal-state-btn {
-            padding: 3px 7px;
-            font-size: 11px;
-            font-weight: 600;
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-sm);
+        .sig-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 3px;
+            min-width: 50px;
+            padding: 7px 6px 5px;
             background: var(--bg-elevated);
-            color: var(--text-primary);
+            border: 1px solid transparent;
+            border-radius: var(--radius-sm);
+            color: var(--text-secondary);
             cursor: pointer;
-            transition: background var(--theme-transition), color var(--theme-transition);
+            transition: all 0.15s ease;
         }
 
-        .signal-state-btn:hover { background: var(--bg-hover); }
+        .sig-btn svg {
+            width: 18px;
+            height: 18px;
+        }
 
-        .signal-state-btn.active {
+        .sig-btn span {
+            font-size: 9px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .sig-btn:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .sig-btn:active {
+            transform: scale(0.96);
+        }
+
+        .sig-btn.active {
             background: var(--primary);
             color: #fff;
-            border-color: var(--primary);
+        }
+
+        /* Numeric signal slider (backlight) */
+        .signal-slider-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--bg-elevated);
+            border-radius: var(--radius-sm);
+            padding: 10px 12px;
+            min-height: 33px;
+        }
+
+        .signal-slider-row svg {
+            width: 16px;
+            height: 16px;
+            color: var(--text-muted);
+            flex-shrink: 0;
         }
 
         .signal-slider {
             flex: 1;
-            min-width: 70px;
+            min-width: 60px;
             accent-color: var(--primary);
         }
 
         .signal-slider-val {
             font-family: 'SF Mono', 'Monaco', monospace;
-            font-size: 11px;
+            font-size: 12px;
+            font-weight: 600;
             color: var(--text-primary);
-            min-width: 20px;
+            min-width: 22px;
             text-align: right;
         }
 
@@ -3126,12 +3168,31 @@
                 </div>
             </div>
 
-            <!-- Lighting & Body (rendered from template signals) -->
-            <div class="card" id="signalsCard" style="display: none;">
+            <!-- Lighting & Body: turn signals + template-defined signals -->
+            <div class="card" id="signalsCard">
                 <div class="card-header">
                     <span class="card-title">Lighting &amp; Body</span>
                 </div>
-                <div id="signalControls"></div>
+                <div class="signal-groups">
+                    <div class="signal-group">
+                        <div class="signal-group-label">Turn Signals</div>
+                        <div class="signal-icon-row">
+                            <button class="sig-btn blinker-btn-compact" data-blinker="LEFT">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                                <span>Left</span>
+                            </button>
+                            <button class="sig-btn blinker-btn-compact hazard" data-blinker="BOTH">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+                                <span>Hazard</span>
+                            </button>
+                            <button class="sig-btn blinker-btn-compact" data-blinker="RIGHT">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                                <span>Right</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="signalControls"></div>
+                </div>
             </div>
             </div><!-- /controls-lighting-row -->
 
@@ -3225,27 +3286,6 @@
                 <div class="vin-stacked">
                     <input type="text" class="input-field vin-input-full" id="vinInput" placeholder="Enter 17-character VIN" maxlength="17">
                     <button class="action-btn primary vin-set-btn" id="updateVinBtn">Set VIN</button>
-                </div>
-            </div>
-
-            <!-- Turn Signals -->
-            <div class="card">
-                <div class="card-header">
-                    <span class="card-title">Turn Signals</span>
-                </div>
-                <div class="blinker-row">
-                    <button class="blinker-btn-compact" data-blinker="LEFT">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-                        <span>Left</span>
-                    </button>
-                    <button class="blinker-btn-compact hazard" data-blinker="BOTH">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
-                        <span>Hazard</span>
-                    </button>
-                    <button class="blinker-btn-compact" data-blinker="RIGHT">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
-                        <span>Right</span>
-                    </button>
                 </div>
             </div>
 
@@ -4822,64 +4862,107 @@
 
         // Render template-defined signal controls (Lighting & Body).
         // GEAR is driven by the dedicated gear selector, so it's skipped here.
+        // Icon set for signal states (stroke style matches the rest of the UI)
+        const SIG_ICONS = {
+            ON:        '<path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/>',
+            OFF:       '<circle cx="12" cy="12" r="9"/><path d="m5.6 5.6 12.8 12.8"/>',
+            SOLID:     '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/>',
+            SLOW:      '<circle cx="12" cy="12" r="8" stroke-dasharray="4 3"/>',
+            FAST:      '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>',
+            FLASH:     '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>',
+            DAY:       '<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>',
+            NIGHT:     '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
+            DRL:       '<circle cx="12" cy="12" r="4"/><path d="M12 4h.01"/><path d="M20 12h.01"/><path d="M12 20h.01"/><path d="M4 12h.01"/><path d="M17.66 6.34h.01"/><path d="M17.66 17.66h.01"/><path d="M6.34 17.66h.01"/><path d="M6.34 6.34h.01"/>',
+            HAZARD:    '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
+            CLOSED:    '<path d="M18 20V6a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v14"/><path d="M2 20h20"/><path d="M14 12v.01"/>',
+            PASSENGER: '<path d="M13 4h3a2 2 0 0 1 2 2v14"/><path d="M2 20h3"/><path d="M13 20h9"/><path d="M10 12v.01"/><path d="M13 4.56v16.16a1 1 0 0 1-1.24.97L5 20V5.56a2 2 0 0 1 1.51-1.94l4-1A2 2 0 0 1 13 4.56Z"/>',
+            DRIVER:    '<path d="M11 4H8a2 2 0 0 0-2 2v14"/><path d="M22 20h-3"/><path d="M11 20H2"/><path d="M14 12v.01"/><path d="M11 4.56v16.16a1 1 0 0 0 1.24.97L19 20V5.56a2 2 0 0 0-1.51-1.94l-4-1A2 2 0 0 0 11 4.56Z"/>',
+            BOTH:      '<path d="M9 4H7a2 2 0 0 0-2 2v14"/><path d="M15 4h2a2 2 0 0 1 2 2v14"/><path d="M2 20h20"/><path d="M9 4.8v14.4a1 1 0 0 1-1.3.95L4 19V6.3a2 2 0 0 1 1.4-1.9l2.3-.55A1 1 0 0 1 9 4.8Z"/><path d="M15 4.8v14.4a1 1 0 0 0 1.3.95L20 19V6.3a2 2 0 0 0-1.4-1.9l-2.3-.55a1 1 0 0 0-1.3.95Z"/>',
+            HOODOPEN:  '<path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9L18 10.5 15.8 7.7c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9c-.13.36-.2.74-.2 1.2v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/>',
+            MYCOLOR:   '<circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.93 0 1.65-.75 1.65-1.69 0-.44-.18-.84-.44-1.13-.29-.28-.44-.65-.44-1.12a1.64 1.64 0 0 1 1.67-1.67h2c3.05 0 5.55-2.5 5.56-5.55C21.97 6.01 17.46 2 12 2z"/>',
+            MAX:       '<circle cx="12" cy="12" r="5"/><path d="M12 1v3"/><path d="M12 20v3"/><path d="m3.9 3.9 2.2 2.2"/><path d="m17.9 17.9 2.2 2.2"/><path d="M1 12h3"/><path d="M20 12h3"/><path d="m5.9 17.9-2 2.2"/><path d="m20.1 3.9-2.2 2.2"/>',
+        };
+        const SIG_ICON_DEFAULT = '<circle cx="12" cy="12" r="4"/>';
+
+        // Short display labels; anything unmapped gets title-cased
+        const SIG_STATE_LABELS = { HOODOPEN: 'Hood', PASSENGER: 'Pass', MYCOLOR: 'MyColor', DRL: 'DRL' };
+        const SIG_GROUP_LABELS = { DAYNIGHT: 'Day / Night', ABS: 'ABS', DRL: 'DRL' };
+
+        function sigSvg(inner) {
+            return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
+        }
+
+        function sigTitleCase(s) {
+            return String(s).charAt(0).toUpperCase() + String(s).slice(1).toLowerCase();
+        }
+
         function renderSignalControls() {
-            const card = document.getElementById('signalsCard');
             const host = document.getElementById('signalControls');
-            const row = document.getElementById('controlsLightingRow');
             const signals = (templates[currentTemplateId]?.signals || [])
                 .filter(s => s.name && s.name.toUpperCase() !== 'GEAR');
 
             host.innerHTML = '';
-            if (signals.length === 0) {
-                card.style.display = 'none';
-                row?.classList.add('no-signals');
-                return;
-            }
-            card.style.display = 'block';
-            row?.classList.remove('no-signals');
 
             signals.forEach(sig => {
-                const row = document.createElement('div');
-                row.className = 'signal-row';
-                row.innerHTML = `<span class="signal-name">${esc(sig.name)}</span>`;
+                const group = document.createElement('div');
+                group.className = 'signal-group';
 
-                const states = document.createElement('div');
-                states.className = 'signal-states';
-                Object.keys(sig.states || {}).forEach(state => {
-                    const btn = document.createElement('button');
-                    btn.className = 'signal-state-btn';
-                    btn.textContent = state;
-                    if (sig.default && sig.default === state) btn.classList.add('active');
-                    btn.addEventListener('click', () => {
-                        states.querySelectorAll('.signal-state-btn').forEach(b => b.classList.remove('active'));
-                        btn.classList.add('active');
-                        sendSignal(sig.name, state);
-                    });
-                    states.appendChild(btn);
-                });
-                row.appendChild(states);
+                const label = document.createElement('div');
+                label.className = 'signal-group-label';
+                label.textContent = SIG_GROUP_LABELS[sig.name.toUpperCase()] || sigTitleCase(sig.name);
+                group.appendChild(label);
 
-                // Continuous controls (e.g. backlight) also get a slider
                 if (sig.numeric) {
+                    // Continuous control (e.g. backlight brightness): slider
+                    // framed by dim/bright icons; slider covers all values.
+                    const row = document.createElement('div');
+                    row.className = 'signal-slider-row';
+                    row.innerHTML = sigSvg(SIG_ICONS.DRL);
+
                     const slider = document.createElement('input');
                     slider.type = 'range';
                     slider.className = 'signal-slider';
                     slider.min = sig.min ?? 0;
                     slider.max = sig.max ?? 255;
                     slider.value = sig.min ?? 0;
+                    slider.title = `${label.textContent} (${slider.min}-${slider.max})`;
+
                     const val = document.createElement('span');
                     val.className = 'signal-slider-val';
                     val.textContent = slider.value;
-                    slider.addEventListener('input', () => {
+
+                    slider.addEventListener('input', () => { val.textContent = slider.value; });
+                    slider.addEventListener('change', () => {
                         val.textContent = slider.value;
-                        states.querySelectorAll('.signal-state-btn').forEach(b => b.classList.remove('active'));
+                        sendSignal(sig.name, slider.value);
                     });
-                    slider.addEventListener('change', () => sendSignal(sig.name, slider.value));
+
                     row.appendChild(slider);
+                    row.insertAdjacentHTML('beforeend', sigSvg(SIG_ICONS.DAY));
                     row.appendChild(val);
+                    group.appendChild(row);
+                } else {
+                    const rowEl = document.createElement('div');
+                    rowEl.className = 'signal-icon-row';
+                    Object.keys(sig.states || {}).forEach(state => {
+                        const key = state.toUpperCase();
+                        const btn = document.createElement('button');
+                        btn.className = 'sig-btn';
+                        btn.title = `${label.textContent}: ${state}`;
+                        btn.innerHTML = sigSvg(SIG_ICONS[key] || SIG_ICON_DEFAULT) +
+                            `<span>${esc(SIG_STATE_LABELS[key] || sigTitleCase(state))}</span>`;
+                        if (sig.default && sig.default === state) btn.classList.add('active');
+                        btn.addEventListener('click', () => {
+                            rowEl.querySelectorAll('.sig-btn').forEach(b => b.classList.remove('active'));
+                            btn.classList.add('active');
+                            sendSignal(sig.name, state);
+                        });
+                        rowEl.appendChild(btn);
+                    });
+                    group.appendChild(rowEl);
                 }
 
-                host.appendChild(row);
+                host.appendChild(group);
             });
         }
 
