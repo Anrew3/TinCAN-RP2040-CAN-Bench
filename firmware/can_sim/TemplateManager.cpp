@@ -383,7 +383,7 @@ void TemplateManager::getTemplateFilename(const char* id, char* filename, size_t
 bool TemplateManager::parseJsonToTemplate(const char* json, size_t len, Template* t) {
     // Heap-backed so templates larger than the old 4 KB cap (e.g. with a
     // full signals section) parse without blowing the stack.
-    DynamicJsonDocument doc(MAX_TEMPLATE_SIZE);
+    JsonDocument doc;
 
     DeserializationError error = deserializeJson(doc, json, len);
     if (error) {
@@ -397,31 +397,31 @@ bool TemplateManager::parseJsonToTemplate(const char* json, size_t len, Template
     initTemplate(t);
 
     // Metadata
-    if (doc.containsKey("id")) {
+    if (!doc["id"].isNull()) {
         strlcpy(t->id, doc["id"] | "custom", sizeof(t->id));
     }
-    if (doc.containsKey("name")) {
+    if (!doc["name"].isNull()) {
         strlcpy(t->name, doc["name"] | "Custom Template", sizeof(t->name));
     }
-    if (doc.containsKey("version")) {
+    if (!doc["version"].isNull()) {
         strlcpy(t->version, doc["version"] | "1.0.0", sizeof(t->version));
     }
 
     // Buttons
-    if (doc.containsKey("buttons")) {
+    if (!doc["buttons"].isNull()) {
         JsonObject buttons = doc["buttons"];
         t->buttonCanId = strtoul(buttons["canId"] | "0x81", nullptr, 0);
         t->buttonHoldMs = buttons["holdMs"] | 100;
         t->buttonIntervalMs = buttons["intervalMs"] | 10;
 
         // Parse default bytes
-        if (buttons.containsKey("default")) {
+        if (!buttons["default"].isNull()) {
             String defStr = buttons["default"].as<String>();
             parseHexBytes(defStr.c_str(), t->buttonDefault, 8);
         }
 
         // Parse button commands
-        if (buttons.containsKey("commands")) {
+        if (!buttons["commands"].isNull()) {
             JsonObject cmds = buttons["commands"];
             t->numButtons = 0;
             for (JsonPair kv : cmds) {
@@ -436,7 +436,7 @@ bool TemplateManager::parseJsonToTemplate(const char* json, size_t len, Template
     }
 
     // Gauges
-    if (doc.containsKey("gauges")) {
+    if (!doc["gauges"].isNull()) {
         JsonObject gauges = doc["gauges"];
         t->numGauges = 0;
         for (JsonPair kv : gauges) {
@@ -448,7 +448,7 @@ bool TemplateManager::parseJsonToTemplate(const char* json, size_t len, Template
 
             g->canId = strtoul(gobj["canId"] | "0x000", nullptr, 0);
 
-            if (gobj.containsKey("base")) {
+            if (!gobj["base"].isNull()) {
                 String baseStr = gobj["base"].as<String>();
                 parseHexBytes(baseStr.c_str(), g->base, 8);
             }
@@ -471,17 +471,17 @@ bool TemplateManager::parseJsonToTemplate(const char* json, size_t len, Template
     }
 
     // Temperature
-    if (doc.containsKey("temperature")) {
+    if (!doc["temperature"].isNull()) {
         JsonObject temp = doc["temperature"];
         t->tempCanId = strtoul(temp["canId"] | "0x156", nullptr, 0);
         t->tempIntervalMs = temp["intervalMs"] | 100;
 
-        if (temp.containsKey("base")) {
+        if (!temp["base"].isNull()) {
             String baseStr = temp["base"].as<String>();
             parseHexBytes(baseStr.c_str(), t->tempBase, 8);
         }
 
-        if (temp.containsKey("sensors")) {
+        if (!temp["sensors"].isNull()) {
             JsonObject sensors = temp["sensors"];
             t->numTempSensors = 0;
             for (JsonPair kv : sensors) {
@@ -499,17 +499,17 @@ bool TemplateManager::parseJsonToTemplate(const char* json, size_t len, Template
     }
 
     // TPMS
-    if (doc.containsKey("tpms")) {
+    if (!doc["tpms"].isNull()) {
         JsonObject tpms = doc["tpms"];
         t->tpmsCanId = strtoul(tpms["canId"] | "0x3B5", nullptr, 0);
         t->tpmsIntervalMs = tpms["intervalMs"] | 200;
 
-        if (tpms.containsKey("base")) {
+        if (!tpms["base"].isNull()) {
             String baseStr = tpms["base"].as<String>();
             parseHexBytes(baseStr.c_str(), t->tpmsBase, 8);
         }
 
-        if (tpms.containsKey("tires")) {
+        if (!tpms["tires"].isNull()) {
             JsonObject tires = tpms["tires"];
             t->numTires = 0;
             for (JsonPair kv : tires) {
@@ -527,24 +527,24 @@ bool TemplateManager::parseJsonToTemplate(const char* json, size_t len, Template
     }
 
     // Blinkers
-    if (doc.containsKey("blinkers")) {
+    if (!doc["blinkers"].isNull()) {
         JsonObject blinkers = doc["blinkers"];
         t->blinkerCanId = strtoul(blinkers["canId"] | "0x3B3", nullptr, 0);
         t->blinkerCanIdAlt = strtoul(blinkers["canIdAlt"] | "0x3B2", nullptr, 0);
         t->blinkerIntervalMs = blinkers["intervalMs"] | 10;
         t->blinkerBlinkRateMs = blinkers["blinkRateMs"] | 500;
 
-        if (blinkers.containsKey("base")) {
+        if (!blinkers["base"].isNull()) {
             String baseStr = blinkers["base"].as<String>();
             parseHexBytes(baseStr.c_str(), t->blinkerBase, 8);
         }
 
-        if (blinkers.containsKey("left")) {
+        if (!blinkers["left"].isNull()) {
             JsonObject left = blinkers["left"];
             t->blinker.leftByte = left["byte"] | 0;
             t->blinker.leftMask = strtoul(left["mask"] | "0x00", nullptr, 0);
         }
-        if (blinkers.containsKey("right")) {
+        if (!blinkers["right"].isNull()) {
             JsonObject right = blinkers["right"];
             t->blinker.rightByte = right["byte"] | 0;
             t->blinker.rightMask = strtoul(right["mask"] | "0x00", nullptr, 0);
@@ -552,7 +552,7 @@ bool TemplateManager::parseJsonToTemplate(const char* json, size_t len, Template
     }
 
     // VIN
-    if (doc.containsKey("vin")) {
+    if (!doc["vin"].isNull()) {
         JsonObject vin = doc["vin"];
         t->vinCanId = strtoul(vin["canId"] | "0x40A", nullptr, 0);
         t->vinIntervalMs = vin["intervalMs"] | 200;
@@ -562,7 +562,7 @@ bool TemplateManager::parseJsonToTemplate(const char* json, size_t len, Template
     }
 
     // Background messages
-    if (doc.containsKey("background")) {
+    if (!doc["background"].isNull()) {
         JsonArray bg = doc["background"];
         t->numBackgroundMsgs = 0;
         for (JsonObject msg : bg) {
@@ -572,7 +572,7 @@ bool TemplateManager::parseJsonToTemplate(const char* json, size_t len, Template
             b->canId = strtoul(msg["canId"] | "0x000", nullptr, 0);
             b->intervalMs = msg["intervalMs"] | 10;
 
-            if (msg.containsKey("data")) {
+            if (!msg["data"].isNull()) {
                 String dataStr = msg["data"].as<String>();
                 b->len = parseHexBytes(dataStr.c_str(), b->data, 8);
             }
@@ -582,7 +582,7 @@ bool TemplateManager::parseJsonToTemplate(const char* json, size_t len, Template
     }
 
     // Boot sequence (one-shot messages at power-up / template load)
-    if (doc.containsKey("boot")) {
+    if (!doc["boot"].isNull()) {
         JsonArray boot = doc["boot"];
         t->numBootMsgs = 0;
         for (JsonObject msg : boot) {
@@ -592,7 +592,7 @@ bool TemplateManager::parseJsonToTemplate(const char* json, size_t len, Template
             b->canId = strtoul(msg["canId"] | "0x000", nullptr, 0);
             b->delayMs = msg["delayMs"] | 50;
 
-            if (msg.containsKey("data")) {
+            if (!msg["data"].isNull()) {
                 String dataStr = msg["data"].as<String>();
                 b->len = parseHexBytes(dataStr.c_str(), b->data, 8);
             }
@@ -602,7 +602,7 @@ bool TemplateManager::parseJsonToTemplate(const char* json, size_t len, Template
     }
 
     // Signals (named byte-span overrides on transmitted frames)
-    if (doc.containsKey("signals")) {
+    if (!doc["signals"].isNull()) {
         JsonArray sigs = doc["signals"];
         t->numSignals = 0;
         for (JsonObject sig : sigs) {
@@ -617,7 +617,7 @@ bool TemplateManager::parseJsonToTemplate(const char* json, size_t len, Template
 
             const char* defName = sig["default"] | "";
 
-            if (sig.containsKey("states")) {
+            if (!sig["states"].isNull()) {
                 JsonObject states = sig["states"];
                 for (JsonPair kv : states) {
                     if (s->numStates >= MAX_SIGNAL_STATES) break;
@@ -640,14 +640,14 @@ bool TemplateManager::parseJsonToTemplate(const char* json, size_t len, Template
 }
 
 void TemplateManager::templateToJson(const Template* t, char* buffer, size_t bufferSize) {
-    DynamicJsonDocument doc(MAX_TEMPLATE_SIZE);
+    JsonDocument doc;
 
     doc["id"] = t->id;
     doc["name"] = t->name;
     doc["version"] = t->version;
 
     // Buttons
-    JsonObject buttons = doc.createNestedObject("buttons");
+    JsonObject buttons = doc["buttons"].to<JsonObject>();
     char hexBuf[32];
     snprintf(hexBuf, sizeof(hexBuf), "0x%02X", (unsigned int)t->buttonCanId);
     buttons["canId"] = hexBuf;
@@ -657,22 +657,22 @@ void TemplateManager::templateToJson(const Template* t, char* buffer, size_t buf
     bytesToHexString(t->buttonDefault, 8, hexBuf, sizeof(hexBuf));
     buttons["default"] = hexBuf;
 
-    JsonObject cmds = buttons.createNestedObject("commands");
+    JsonObject cmds = buttons["commands"].to<JsonObject>();
     for (int i = 0; i < t->numButtons; i++) {
         bytesToHexString(t->buttons[i].data, 8, hexBuf, sizeof(hexBuf));
         cmds[t->buttons[i].name] = hexBuf;
     }
 
     // Gauges
-    JsonObject gauges = doc.createNestedObject("gauges");
+    JsonObject gauges = doc["gauges"].to<JsonObject>();
     for (int i = 0; i < t->numGauges; i++) {
-        JsonObject g = gauges.createNestedObject(t->gauges[i].name);
+        JsonObject g = gauges[t->gauges[i].name].to<JsonObject>();
         snprintf(hexBuf, sizeof(hexBuf), "0x%03X", (unsigned int)t->gauges[i].canId);
         g["canId"] = hexBuf;
         bytesToHexString(t->gauges[i].base, 8, hexBuf, sizeof(hexBuf));
         g["base"] = hexBuf;
 
-        JsonArray vb = g.createNestedArray("valueBytes");
+        JsonArray vb = g["valueBytes"].to<JsonArray>();
         for (int j = 0; j < t->gauges[i].numValueBytes; j++) {
             vb.add(t->gauges[i].valueBytes[j]);
         }
@@ -685,36 +685,36 @@ void TemplateManager::templateToJson(const Template* t, char* buffer, size_t buf
     }
 
     // Temperature
-    JsonObject temp = doc.createNestedObject("temperature");
+    JsonObject temp = doc["temperature"].to<JsonObject>();
     snprintf(hexBuf, sizeof(hexBuf), "0x%03X", (unsigned int)t->tempCanId);
     temp["canId"] = hexBuf;
     bytesToHexString(t->tempBase, 8, hexBuf, sizeof(hexBuf));
     temp["base"] = hexBuf;
     temp["intervalMs"] = t->tempIntervalMs;
 
-    JsonObject sensors = temp.createNestedObject("sensors");
+    JsonObject sensors = temp["sensors"].to<JsonObject>();
     for (int i = 0; i < t->numTempSensors; i++) {
-        JsonObject s = sensors.createNestedObject(t->tempSensors[i].name);
+        JsonObject s = sensors[t->tempSensors[i].name].to<JsonObject>();
         s["byte"] = t->tempSensors[i].byteIndex;
     }
 
     // TPMS
-    JsonObject tpms = doc.createNestedObject("tpms");
+    JsonObject tpms = doc["tpms"].to<JsonObject>();
     snprintf(hexBuf, sizeof(hexBuf), "0x%03X", (unsigned int)t->tpmsCanId);
     tpms["canId"] = hexBuf;
     bytesToHexString(t->tpmsBase, 8, hexBuf, sizeof(hexBuf));
     tpms["base"] = hexBuf;
     tpms["intervalMs"] = t->tpmsIntervalMs;
 
-    JsonObject tires = tpms.createNestedObject("tires");
+    JsonObject tires = tpms["tires"].to<JsonObject>();
     for (int i = 0; i < t->numTires; i++) {
-        JsonObject tire = tires.createNestedObject(t->tires[i].name);
+        JsonObject tire = tires[t->tires[i].name].to<JsonObject>();
         tire["byte"] = t->tires[i].byteIndex;
         tire["scale"] = t->tires[i].scale;
     }
 
     // Blinkers
-    JsonObject blinkers = doc.createNestedObject("blinkers");
+    JsonObject blinkers = doc["blinkers"].to<JsonObject>();
     snprintf(hexBuf, sizeof(hexBuf), "0x%03X", (unsigned int)t->blinkerCanId);
     blinkers["canId"] = hexBuf;
     snprintf(hexBuf, sizeof(hexBuf), "0x%03X", (unsigned int)t->blinkerCanIdAlt);
@@ -724,18 +724,18 @@ void TemplateManager::templateToJson(const Template* t, char* buffer, size_t buf
     blinkers["intervalMs"] = t->blinkerIntervalMs;
     blinkers["blinkRateMs"] = t->blinkerBlinkRateMs;
 
-    JsonObject left = blinkers.createNestedObject("left");
+    JsonObject left = blinkers["left"].to<JsonObject>();
     left["byte"] = t->blinker.leftByte;
     snprintf(hexBuf, sizeof(hexBuf), "0x%02X", t->blinker.leftMask);
     left["mask"] = hexBuf;
 
-    JsonObject right = blinkers.createNestedObject("right");
+    JsonObject right = blinkers["right"].to<JsonObject>();
     right["byte"] = t->blinker.rightByte;
     snprintf(hexBuf, sizeof(hexBuf), "0x%02X", t->blinker.rightMask);
     right["mask"] = hexBuf;
 
     // VIN
-    JsonObject vin = doc.createNestedObject("vin");
+    JsonObject vin = doc["vin"].to<JsonObject>();
     snprintf(hexBuf, sizeof(hexBuf), "0x%03X", (unsigned int)t->vinCanId);
     vin["canId"] = hexBuf;
     vin["intervalMs"] = t->vinIntervalMs;
@@ -743,9 +743,9 @@ void TemplateManager::templateToJson(const Template* t, char* buffer, size_t buf
     vin["framePrefix"] = hexBuf;
 
     // Background messages
-    JsonArray bg = doc.createNestedArray("background");
+    JsonArray bg = doc["background"].to<JsonArray>();
     for (int i = 0; i < t->numBackgroundMsgs; i++) {
-        JsonObject msg = bg.createNestedObject();
+        JsonObject msg = bg.add<JsonObject>();
         snprintf(hexBuf, sizeof(hexBuf), "0x%03X", (unsigned int)t->backgroundMsgs[i].canId);
         msg["canId"] = hexBuf;
         bytesToHexString(t->backgroundMsgs[i].data, t->backgroundMsgs[i].len, hexBuf, sizeof(hexBuf));
@@ -755,9 +755,9 @@ void TemplateManager::templateToJson(const Template* t, char* buffer, size_t buf
 
     // Boot sequence
     if (t->numBootMsgs > 0) {
-        JsonArray boot = doc.createNestedArray("boot");
+        JsonArray boot = doc["boot"].to<JsonArray>();
         for (int i = 0; i < t->numBootMsgs; i++) {
-            JsonObject msg = boot.createNestedObject();
+            JsonObject msg = boot.add<JsonObject>();
             snprintf(hexBuf, sizeof(hexBuf), "0x%03X", (unsigned int)t->bootMsgs[i].canId);
             msg["canId"] = hexBuf;
             bytesToHexString(t->bootMsgs[i].data, t->bootMsgs[i].len, hexBuf, sizeof(hexBuf));
@@ -768,15 +768,15 @@ void TemplateManager::templateToJson(const Template* t, char* buffer, size_t buf
 
     // Signals
     if (t->numSignals > 0) {
-        JsonArray sigs = doc.createNestedArray("signals");
+        JsonArray sigs = doc["signals"].to<JsonArray>();
         for (int i = 0; i < t->numSignals; i++) {
             const SignalDef* s = &t->signals[i];
-            JsonObject sig = sigs.createNestedObject();
+            JsonObject sig = sigs.add<JsonObject>();
             sig["name"] = s->name;
             snprintf(hexBuf, sizeof(hexBuf), "0x%03X", (unsigned int)s->canId);
             sig["canId"] = hexBuf;
             sig["startByte"] = s->startByte;
-            JsonObject states = sig.createNestedObject("states");
+            JsonObject states = sig["states"].to<JsonObject>();
             for (int j = 0; j < s->numStates; j++) {
                 bytesToHexString(s->states[j].data, s->states[j].len, hexBuf, sizeof(hexBuf));
                 states[s->states[j].name] = hexBuf;

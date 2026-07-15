@@ -13,11 +13,11 @@ this core — no separate install.
 
 | Library | Author | Version | Notes |
 |---------|--------|---------|-------|
-| **ArduinoJson** | Benoit Blanchon | **6.x** (e.g. 6.21.5) | ⚠️ Pick a 6.x version, **not 7.x** — this firmware uses the v6 API (`DynamicJsonDocument`, `containsKey`, `createNestedObject`). Library Manager defaults to 7.x, so open the version dropdown and choose the latest 6.x. |
+| **ArduinoJson** | Benoit Blanchon | **7.x** (the Library Manager default) | Uses the v7 API (`JsonDocument`, `.to<>()`, `.add<>()`). |
 | **mcp_can** | coryjfowler | latest | The MCP2515 driver (`mcp_can.h`). |
 
 > `ArduinoJson.h: No such file or directory` just means ArduinoJson isn't
-> installed yet — install it (6.x) as above. `mcp_can.h: No such file...` is the
+> installed yet — install it as above. `mcp_can.h: No such file...` is the
 > same thing for the CAN driver.
 
 **Flash size** — pick a partition with a LittleFS filesystem
