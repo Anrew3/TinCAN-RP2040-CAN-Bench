@@ -135,8 +135,7 @@ these signals; any template can define its own.
 | Reverse / gear | `0x171` B0/B1 (`36 32`) | `GEAR:R` (gear selector) | ✅ implemented (0x171 now transmitted) |
 | ABS light | `0x416` B6 | `SIGNAL:ABS:OFF\|SOLID\|SLOW\|FAST` | ✅ implemented |
 | Traction light | `0x416` B5 | `SIGNAL:TRACTION:OFF\|SOLID\|FLASH` | ✅ implemented |
-| Headlamp | `0x3B2/3` B0 | `SIGNAL:HEADLAMP:OFF\|ON` | ✅ implemented |
-| DRL / night / hazard | `0x3B2/3` B1 | `SIGNAL:MODE:DRL\|NIGHT\|HAZARD` | ✅ implemented |
+| Headlights (B0+B1 pair) | `0x3B2/3` B0+B1 | `SIGNAL:HEADLIGHTS:DRL\|ON` | ✅ implemented |
 | Backlight / brightness | `0x3B2/3` B3 | `SIGNAL:BACKLIGHT:<0-17>` | ✅ implemented (slider in UI) |
 | Day / night dimming | `0x3B2/3` B5 | `SIGNAL:DAYNIGHT:DAY\|NIGHT` | ✅ implemented |
 | Doors / hood | `0x3B2/3` B7 | `SIGNAL:DOORS:CLOSED\|PASSENGER\|DRIVER\|BOTH\|HOODOPEN` | ✅ implemented |

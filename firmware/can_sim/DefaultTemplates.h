@@ -219,14 +219,12 @@ void initMustangS550Template(Template* t) {
     dtState(gear, "DRIVE",   "00 00", false);
 
     // Lighting / body over the 0x3B3 (+0x3B2) frame
-    SignalDef* head = dtSignal(t, "HEADLAMP", 0x3B3, 0);
-    dtState(head, "OFF", "40", true);
-    dtState(head, "ON",  "44", false);
-
-    SignalDef* mode = dtSignal(t, "MODE", 0x3B3, 1);
-    dtState(mode, "DRL",    "48", true);
-    dtState(mode, "NIGHT",  "88", false);
-    dtState(mode, "HAZARD", "4A", false);
+    // Headlight switch: B0 (headlamp) and B1 (DRL/night) move together on
+    // this car, so they're one control written as a byte pair. Hazard is a
+    // turn-signal function (B4/B6), handled by the Turn Signals control.
+    SignalDef* head = dtSignal(t, "HEADLIGHTS", 0x3B3, 0);
+    dtState(head, "DRL", "40 48", true);   // daytime running lights
+    dtState(head, "ON",  "44 88", false);  // headlamps on (night)
 
     // Backlight is continuous (0x00-0x11); named states are shortcuts.
     // No default so the base brightness (0x10) is left untouched.
