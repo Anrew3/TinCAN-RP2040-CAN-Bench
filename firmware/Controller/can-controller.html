@@ -4905,9 +4905,7 @@
             CLOSED: 'All Closed', PASSENGER: 'Passenger', DRIVER: 'Driver',
             BOTH: 'Both Open', HOODOPEN: 'Hood', MYCOLOR: 'MyColor', DRL: 'DRL'
         };
-        // "MODE" is the exterior-lighting mode byte (0x3B2/3 B1), not the
-        // day/night dimming - label it clearly so the two don't get confused.
-        const SIG_GROUP_LABELS = { MODE: 'Headlights', DAYNIGHT: 'Day / Night', ABS: 'ABS', DRL: 'DRL' };
+        const SIG_GROUP_LABELS = { DAYNIGHT: 'Day / Night', ABS: 'ABS', DRL: 'DRL' };
 
         function sigSvg(inner) {
             return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;

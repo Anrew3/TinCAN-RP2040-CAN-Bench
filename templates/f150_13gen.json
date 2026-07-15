@@ -146,20 +146,12 @@
       "description": "Gear selector; REVERSE sets 0x171 B0/B1"
     },
     {
-      "name": "HEADLAMP",
+      "name": "HEADLIGHTS",
       "canId": "0x3B3",
       "startByte": 0,
-      "default": "OFF",
-      "states": { "OFF": "40", "ON": "44" },
-      "description": "0x3B2/3 B0 headlamp"
-    },
-    {
-      "name": "MODE",
-      "canId": "0x3B3",
-      "startByte": 1,
       "default": "DRL",
-      "states": { "DRL": "48", "NIGHT": "88", "HAZARD": "4A" },
-      "description": "0x3B2/3 B1 DRL/night/hazard"
+      "states": { "DRL": "40 48", "ON": "44 88" },
+      "description": "0x3B2/3 B0+B1 headlight switch, written as a pair: DRL/daytime (B0=40,B1=48) or headlamps on/night (B0=44,B1=88). Hazard lives in the Turn Signals control (B4/B6)."
     },
     {
       "name": "BACKLIGHT",
