@@ -4,11 +4,25 @@ Template-based vehicle CAN simulator for RP2040 + MCP2515.
 
 ## Building
 
-Arduino IDE (or arduino-cli) with:
+**Board core** — install [arduino-pico](https://github.com/earlephilhower/arduino-pico)
+(Raspberry Pi Pico / RP2040) via Boards Manager. `SPI` and `LittleFS` ship with
+this core — no separate install.
 
-- **Board core**: [arduino-pico](https://github.com/earlephilhower/arduino-pico) (Raspberry Pi Pico / RP2040)
-- **Libraries**: `mcp_can` (coryjfowler), `ArduinoJson`
-- **Flash size**: pick a partition with a LittleFS filesystem (e.g. `2MB (Sketch: 1MB, FS: 1MB)`) — template and settings storage lives there
+**Libraries** — install both from the Arduino IDE Library Manager
+(*Tools → Manage Libraries…*):
+
+| Library | Author | Version | Notes |
+|---------|--------|---------|-------|
+| **ArduinoJson** | Benoit Blanchon | **6.x** (e.g. 6.21.5) | ⚠️ Pick a 6.x version, **not 7.x** — this firmware uses the v6 API (`DynamicJsonDocument`, `containsKey`, `createNestedObject`). Library Manager defaults to 7.x, so open the version dropdown and choose the latest 6.x. |
+| **mcp_can** | coryjfowler | latest | The MCP2515 driver (`mcp_can.h`). |
+
+> `ArduinoJson.h: No such file or directory` just means ArduinoJson isn't
+> installed yet — install it (6.x) as above. `mcp_can.h: No such file...` is the
+> same thing for the CAN driver.
+
+**Flash size** — pick a partition with a LittleFS filesystem
+(*Tools → Flash Size → e.g. `2MB (Sketch: 1MB, FS: 1MB)`*); templates and
+settings persist there.
 
 Export the compiled UF2 and place it at `firmware/uf2/can_sim.uf2` so the web
 flasher's "Official Firmware" option serves it.
