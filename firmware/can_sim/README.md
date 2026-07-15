@@ -24,8 +24,11 @@ this core — no separate install.
 (*Tools → Flash Size → e.g. `2MB (Sketch: 1MB, FS: 1MB)`*); templates and
 settings persist there.
 
-Export the compiled UF2 and place it at `firmware/uf2/can_sim.uf2` so the web
-flasher's "Official Firmware" option serves it.
+Export the compiled UF2 (*Sketch → Export Compiled Binary* writes it under
+`firmware/can_sim/build/…/can_sim.ino.uf2`) and copy it to
+**`firmware/can_sim.uf2`** — that's the file the web flasher's "Official
+Firmware" option fetches. Only the `.uf2` is needed; the `.elf`/`.bin`/`.hex`/
+`.map` build artifacts can be ignored.
 
 ## Serial protocol (9600 baud, newline-terminated)
 

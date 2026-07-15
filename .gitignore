@@ -27,10 +27,14 @@ notes-personal.*
 ehthumbs.db
 Thumbs.db
 
-# Build outputs
+# Build outputs (Arduino export-compiled-binary etc.)
+# Note: .uf2 is intentionally NOT ignored - firmware/can_sim.uf2 is committed.
+build/
 *.elf
 *.hex
 *.bin
+*.map
+*.eep
 
 # Temporary files
 *.tmp
