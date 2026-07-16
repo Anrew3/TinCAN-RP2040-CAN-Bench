@@ -24,11 +24,22 @@ this core — no separate install.
 (*Tools → Flash Size → e.g. `2MB (Sketch: 1MB, FS: 1MB)`*); templates and
 settings persist there.
 
-Export the compiled UF2 (*Sketch → Export Compiled Binary* writes it under
-`firmware/can_sim/build/…/can_sim.ino.uf2`) and copy it to
-**`firmware/can_sim.uf2`** — that's the file the web flasher's "Official
-Firmware" option fetches. Only the `.uf2` is needed; the `.elf`/`.bin`/`.hex`/
-`.map` build artifacts can be ignored.
+### Publishing the official firmware
+
+The web flasher's "Official Firmware" button fetches **`firmware/can_sim.uf2`**
+over HTTP from GitHub, so it can only serve a UF2 that's committed to the repo —
+it can't read the local `build/` folder (that's git-ignored and never pushed).
+After building, get your fresh UF2 into that committed spot:
+
+1. *Sketch → Export Compiled Binary* (writes `firmware/can_sim/build/<board>/can_sim.ino.uf2`).
+2. Run **`./firmware/publish-firmware.sh`** — it finds the newest built `.uf2`
+   and copies it to `firmware/can_sim.uf2` for you (no manual dragging).
+3. `git add firmware/can_sim.uf2 && git commit -m "Update firmware" && git push`.
+
+Once pushed, the hosted flasher serves your new build. Only the `.uf2` matters;
+the `.elf`/`.bin`/`.hex`/`.map` build artifacts are git-ignored and can be
+ignored. (Users can always flash a local build directly with the flasher's
+**Custom UF2 File** button without any of this.)
 
 ## Serial protocol (9600 baud, newline-terminated)
 
