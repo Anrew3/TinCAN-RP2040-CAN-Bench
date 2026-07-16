@@ -1757,6 +1757,13 @@
             opacity: 0.85;
         }
 
+        .vehicle-community-dot {
+            color: #c084fc;
+            font-size: 8px;
+            margin-left: 5px;
+            vertical-align: middle;
+        }
+
         .template-editor-btn {
             display: flex;
             align-items: center;
@@ -2128,6 +2135,11 @@
         .template-item-badge.builtin {
             background: var(--primary-glow);
             color: var(--primary);
+        }
+
+        .template-item-badge.community {
+            background: rgba(168, 85, 247, 0.15);
+            color: #c084fc;
         }
 
         .template-item-badge.custom {
@@ -4004,48 +4016,67 @@
         };
 
         // Templates loaded from GitHub (no hardcoded templates)
-        let BUILTIN_TEMPLATES = {};
+        let BUILTIN_TEMPLATES = {};        // official + community (repo-provided)
+        let COMMUNITY_IDS = new Set();     // which of those are community-contributed
 
-        // List of official template files to fetch from repo
-        const OFFICIAL_TEMPLATE_FILES = [
-            'mustang_s550.json',
-            'f150_13gen.json'
-        ];
+        // Fallback catalog if the manifest can't be fetched
+        const DEFAULT_MANIFEST = { official: ['mustang_s550', 'f150_13gen'], community: [] };
 
-        // Fetch all templates from GitHub on page load
+        async function loadTemplateFile(url) {
+            try {
+                const r = await fetch(url);
+                if (!r.ok) { console.warn(`fetch ${url} -> HTTP ${r.status}`); return null; }
+                const t = await r.json();
+                return (t && t.id) ? t : null;
+            } catch (e) {
+                console.warn(`Error loading ${url}:`, e);
+                return null;
+            }
+        }
+
+        // Fetch the template catalog (templates/index.json) then each template.
+        // Official live in templates/<id>.json, community in templates/community/<id>.json.
         async function fetchTemplatesFromRepo() {
             log('Loading templates from repository...', 'info');
+            BUILTIN_TEMPLATES = {};
+            COMMUNITY_IDS = new Set();
+
+            let manifest = DEFAULT_MANIFEST;
+            try {
+                const m = await fetch(`${CONFIG.TEMPLATES_URL}/index.json`);
+                if (m.ok) {
+                    const parsed = await m.json();
+                    manifest = {
+                        official: Array.isArray(parsed.official) ? parsed.official : [],
+                        community: Array.isArray(parsed.community) ? parsed.community : []
+                    };
+                }
+            } catch (e) {
+                console.warn('Manifest fetch failed, using defaults:', e);
+            }
 
             let loadedCount = 0;
-            for (const filename of OFFICIAL_TEMPLATE_FILES) {
-                try {
-                    const url = `${CONFIG.TEMPLATES_URL}/${filename}`;
-                    const response = await fetch(url);
-                    if (!response.ok) {
-                        console.warn(`Failed to fetch ${filename}: HTTP ${response.status}`);
-                        continue;
-                    }
-
-                    const template = await response.json();
-                    if (template.id) {
-                        BUILTIN_TEMPLATES[template.id] = template;
-                        loadedCount++;
-                    }
-                } catch (e) {
-                    console.warn(`Error loading ${filename}:`, e);
-                }
+            for (const id of manifest.official) {
+                const t = await loadTemplateFile(`${CONFIG.TEMPLATES_URL}/${id}.json`);
+                if (t) { BUILTIN_TEMPLATES[t.id] = t; loadedCount++; }
+            }
+            for (const id of manifest.community) {
+                const t = await loadTemplateFile(`${CONFIG.TEMPLATES_URL}/community/${id}.json`);
+                if (t) { BUILTIN_TEMPLATES[t.id] = t; COMMUNITY_IDS.add(t.id); loadedCount++; }
             }
 
             if (loadedCount > 0) {
                 log(`Loaded ${loadedCount} templates from GitHub`, 'success');
-                // Cache templates in localStorage for offline use
                 localStorage.setItem('tincan_cached_templates', JSON.stringify(BUILTIN_TEMPLATES));
+                localStorage.setItem('tincan_cached_community', JSON.stringify([...COMMUNITY_IDS]));
             } else {
-                // Try to load from cache if online fetch failed
+                // Fall back to the offline cache
                 const cached = localStorage.getItem('tincan_cached_templates');
                 if (cached) {
                     try {
                         BUILTIN_TEMPLATES = JSON.parse(cached);
+                        COMMUNITY_IDS = new Set(JSON.parse(localStorage.getItem('tincan_cached_community') || '[]'));
+                        loadedCount = Object.keys(BUILTIN_TEMPLATES).length;
                         log('Loaded templates from cache (offline mode)', 'info');
                     } catch (e) {
                         log('No templates available - check internet connection', 'error');
@@ -4056,6 +4087,7 @@
                     Toast.error('No templates available');
                 }
             }
+            return loadedCount;
         }
 
         // State
@@ -4230,33 +4262,18 @@
             localStorage.setItem('tincan_templates', JSON.stringify(customTemplates));
         }
 
-        // Sync templates from GitHub repository
+        // Sync templates from GitHub repository (official + community, manifest-driven)
         async function syncTemplatesFromRepo() {
             Toast.info('Syncing templates from repository...');
-            log('Fetching templates from GitHub...', 'info');
+            log('Fetching templates from GitHub (manifest-driven)...', 'info');
 
             try {
-                // Fetch the template list from the repo
-                const templateFiles = ['mustang_s550.json', 'f150_13gen.json'];
-                let syncedCount = 0;
+                const syncedCount = await fetchTemplatesFromRepo();
 
-                for (const filename of templateFiles) {
-                    try {
-                        const url = `${CONFIG.TEMPLATES_URL}/${filename}`;
-                        const response = await fetch(url);
-                        if (!response.ok) continue;
-
-                        const template = await response.json();
-                        if (template.id) {
-                            // Update built-in template with latest from repo
-                            BUILTIN_TEMPLATES[template.id] = template;
-                            templates[template.id] = template;
-                            syncedCount++;
-                            log(`Updated template: ${template.name}`, 'info');
-                        }
-                    } catch (e) {
-                        console.warn(`Failed to fetch ${filename}:`, e);
-                    }
+                // Merge freshly-fetched repo templates into the live set
+                templates = { ...BUILTIN_TEMPLATES, ...templates };
+                for (const [id, t] of Object.entries(BUILTIN_TEMPLATES)) {
+                    templates[id] = t; // repo copy wins for official/community ids
                 }
 
                 if (syncedCount > 0) {
@@ -4265,8 +4282,10 @@
                     if (templates[currentTemplateId]) {
                         currentTemplate = new TemplateEngine(templates[currentTemplateId]);
                     }
+                    renderTemplateList();
+                    const communityCount = COMMUNITY_IDS.size;
                     Toast.success(`Synced ${syncedCount} template(s)`);
-                    log(`Synced ${syncedCount} templates from repository`, 'success');
+                    log(`Synced ${syncedCount} templates (${communityCount} community) from repository`, 'success');
                 } else {
                     Toast.warning('No templates found or fetch failed');
                     log('No templates synced (may be offline or repo unavailable)', 'info');
@@ -4301,9 +4320,11 @@
 
                 const modelName = template.vehicle?.model || template.name;
                 const years = template.vehicle?.years || '';
+                const communityTag = COMMUNITY_IDS.has(id)
+                    ? '<span class="vehicle-community-dot" title="Community template">●</span>' : '';
 
                 btn.innerHTML = `
-                    <span class="vehicle-model">${esc(modelName)}</span>
+                    <span class="vehicle-model">${esc(modelName)}${communityTag}</span>
                     ${years ? `<span class="vehicle-gen">${esc(years)}</span>` : ''}
                 `;
 
@@ -4340,6 +4361,15 @@
 
             for (const [id, template] of Object.entries(templates)) {
                 const isBuiltin = !!BUILTIN_TEMPLATES[id];
+                const isCommunity = COMMUNITY_IDS.has(id);
+                let badgeClass, badgeLabel;
+                if (isCommunity) {
+                    badgeClass = 'community'; badgeLabel = 'Community';
+                } else if (isBuiltin) {
+                    badgeClass = 'builtin'; badgeLabel = 'Official';
+                } else {
+                    badgeClass = 'custom'; badgeLabel = 'Custom';
+                }
                 const item = document.createElement('div');
                 item.className = `template-item${id === editingTemplateId ? ' active' : ''}`;
                 item.innerHTML = `
@@ -4347,7 +4377,7 @@
                         <div class="template-item-name">${esc(template.name)}</div>
                         <div class="template-item-meta">${esc(template.vehicle?.make || '')} ${esc(template.vehicle?.model || '')} ${esc(template.vehicle?.years || '')}</div>
                     </div>
-                    <span class="template-item-badge ${isBuiltin ? 'builtin' : 'custom'}">${isBuiltin ? 'Built-in' : 'Custom'}</span>
+                    <span class="template-item-badge ${badgeClass}">${badgeLabel}</span>
                 `;
                 item.addEventListener('click', () => editTemplate(id));
                 list.appendChild(item);
