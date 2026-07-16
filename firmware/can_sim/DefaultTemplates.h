@@ -165,6 +165,19 @@ void initMustangS550Template(Template* t) {
     t->blinker.rightByte = 4;
     t->blinker.rightMask = 0x08;
 
+    // CGEA-1.3 wake payload on 0x3B3 - boots dormant SYNC head units.
+    // Starts in WAKE mode; switch to lighting with BODY:LIGHT.
+    t->blinkerWakeBase[0] = 0x41;
+    t->blinkerWakeBase[1] = 0x00;
+    t->blinkerWakeBase[2] = 0x00;
+    t->blinkerWakeBase[3] = 0x00;
+    t->blinkerWakeBase[4] = 0x4C;
+    t->blinkerWakeBase[5] = 0x00;
+    t->blinkerWakeBase[6] = 0x00;
+    t->blinkerWakeBase[7] = 0x00;
+    t->blinkerHasWake = true;
+    t->blinkerWakeDefault = true;
+
     // VIN
     t->vinCanId = 0x40A;
     t->vinIntervalMs = 200;
@@ -206,7 +219,20 @@ void initMustangS550Template(Template* t) {
     t->backgroundMsgs[2].len = 8;
     t->backgroundMsgs[2].intervalMs = 10;
 
-    t->numBackgroundMsgs = 3;
+    // C1MCA "turn on" (0x048) - part of the SYNC wake sequence (v1 boot).
+    t->backgroundMsgs[3].canId = 0x048;
+    t->backgroundMsgs[3].data[0] = 0x00;
+    t->backgroundMsgs[3].data[1] = 0x00;
+    t->backgroundMsgs[3].data[2] = 0x00;
+    t->backgroundMsgs[3].data[3] = 0x00;
+    t->backgroundMsgs[3].data[4] = 0x07;
+    t->backgroundMsgs[3].data[5] = 0x00;
+    t->backgroundMsgs[3].data[6] = 0xE0;
+    t->backgroundMsgs[3].data[7] = 0x00;
+    t->backgroundMsgs[3].len = 8;
+    t->backgroundMsgs[3].intervalMs = 10;
+
+    t->numBackgroundMsgs = 4;
 
     // ---- Signals (named byte-span overrides on the frames above) ----
     t->numSignals = 0;

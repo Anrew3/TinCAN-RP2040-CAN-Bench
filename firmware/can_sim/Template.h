@@ -119,13 +119,21 @@ struct Template {
     TireDef tires[MAX_TIRES];
     byte numTires;
 
-    // Blinkers
+    // Blinkers / body-lighting frame (0x3B3, mirrored to 0x3B2)
     unsigned long blinkerCanId;
     unsigned long blinkerCanIdAlt;  // Some vehicles use two IDs
-    byte blinkerBase[8];
+    byte blinkerBase[8];            // "light" base - lighting/blinker overlays ride this
     unsigned long blinkerIntervalMs;
     unsigned long blinkerBlinkRateMs;
     BlinkerDef blinker;
+
+    // Optional WAKE payload for the same frame. Fords need a CGEA/network
+    // wake pattern on 0x3B3 to boot a dormant SYNC head unit; it collides
+    // with the lighting bytes, so it's a separate base you switch to (BODY:WAKE
+    // / BODY:LIGHT). When present + wakeDefault, the frame starts in wake mode.
+    byte blinkerWakeBase[8];
+    bool blinkerHasWake;
+    bool blinkerWakeDefault;
 
     // VIN
     unsigned long vinCanId;

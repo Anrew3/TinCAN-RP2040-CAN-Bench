@@ -142,6 +142,26 @@ these signals; any template can define its own.
 | Turn signals | `0x3B2/3` B4/B6 | `BLINKER:LEFT\|RIGHT\|BOTH\|OFF` | ✅ (pre-existing) |
 | Speed scale | `0x202` B6/7 | gauge `scale` field (editable in template) | ✅ customizable per template |
 
+## SYNC head-unit wake sequence (from the v1 boot sketch)
+
+Booting a dormant SYNC 3 APIM needs a wake/enable sequence that the cluster
+notes above don't cover — it lived only in the original v1 boot sketch. All
+three are sent **continuously**:
+
+| CAN ID | Payload | Role |
+|--------|---------|------|
+| `0x3B3` | `41 00 00 00 4C 00 00 00` | CGEA-1.3 network **wake** (boots the unit) |
+| `0x048` | `00 00 00 00 07 00 E0 00` | C1MCA **turn-on** ("turned most units on") |
+| `0x109` | `00 03 01 00 00 00 00 28` | accessory-on / park keepalive (also the cluster heartbeat) |
+
+> **`0x3B3` is dual-use.** The wake payload (`41 00 00 00 4C…`) collides with the
+> lighting decode (`40 48 C0 10…`) on bytes 0 and 4, so the frame can't be both at
+> once. v2.1.0 handles this with a runtime switch: **`BODY:WAKE`** (default — sends
+> the wake, boots the unit) vs **`BODY:LIGHT`** (sends the lighting base so the
+> headlight/turn-signal/door controls take effect). Templates set it via
+> `blinkers.wakeBase` + `wakeDefault`. `0x048` and `0x109` are plain continuous
+> keepalives (`background`), no conflict.
+
 ## Remaining discrepancies (verify on hardware)
 
 | ID | Firmware default | Notes | Note |

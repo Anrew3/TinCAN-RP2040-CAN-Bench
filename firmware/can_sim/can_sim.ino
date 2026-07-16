@@ -195,6 +195,7 @@ void setup() {
         Serial.println("  TEMP:OIL:<F>         - Set oil temp");
         Serial.println("  TPMS:FL:<psi>        - Set tire pressure");
         Serial.println("  BLINKER:LEFT/RIGHT/OFF/BOTH");
+        Serial.println("  BODY:WAKE|LIGHT      - 0x3B3 SYNC-wake vs lighting mode");
         Serial.println("  GEAR:<P|R|N|D>       - Set gear (reverse via 0x171)");
         Serial.println("  SIGNAL:<name>:<state> - Set a template signal");
         Serial.println("     (e.g. SIGNAL:ABS:FLASH, SIGNAL:HEADLAMP:ON,");
@@ -921,6 +922,8 @@ void printStatus() {
     Serial.print(sniffEnabled ? "true" : "false");
     Serial.print(",\"demo\":");
     Serial.print(demoActive ? "true" : "false");
+    Serial.print(",\"bodyWake\":");
+    Serial.print(templateRunner.getBodyWakeMode() ? "true" : "false");
     Serial.print(",\"freeHeap\":");
     Serial.print((unsigned int)rp2040.getFreeHeap());
     if (fsOk) {

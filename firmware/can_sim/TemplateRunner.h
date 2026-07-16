@@ -28,6 +28,12 @@ public:
     // value. Returns false if the template has no signal by that name.
     bool setSignal(const char* name, const char* value);
 
+    // Body/0x3B3 frame mode: true = WAKE payload (boots SYNC), false = LIGHT
+    // base with lighting/blinker overlays. No effect if the template has no
+    // wake payload.
+    void setBodyWakeMode(bool wake);
+    bool getBodyWakeMode() { return bodyWakeMode; }
+
     // Get current state
     int getRPM() { return currentRPM; }
     int getSpeed() { return currentSpeed; }
@@ -50,6 +56,7 @@ private:
     bool rightBlinkerActive;
     bool blinkerState;
     unsigned long lastBlinkerToggle;
+    bool bodyWakeMode;   // true = send the 0x3B3 wake payload instead of lighting
 
     // Button state
     bool buttonActive;
