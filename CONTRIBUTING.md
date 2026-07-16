@@ -23,7 +23,7 @@ can later be promoted to official.
 
 ### 1. Build it in the controller
 
-Open the [TinCAN Controller](https://anrew3.github.io/TinCAN-CANBUS-Simulator/firmware/Controller/can-controller.html),
+Open the [TinCAN Controller](https://anrew3.github.io/TinCAN-RP2040-CAN-Bench/firmware/Controller/can-controller.html),
 click **Templates** to open the editor, and either start from an existing
 template or from a blank one. Set the CAN IDs, gauges, blinkers, signals, and
 background/boot messages for your vehicle. Test against real hardware if you

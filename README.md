@@ -31,7 +31,7 @@
 ## TinCAN Controller & Flasher
 
 <div align="center">
-  <a href="https://anrew3.github.io/TinCAN-CANBUS-Simulator/firmware/Controller/can-controller.html"
+  <a href="https://anrew3.github.io/TinCAN-RP2040-CAN-Bench/firmware/Controller/can-controller.html"
      target="_blank"
      rel="noopener noreferrer">
     <img src="https://img.shields.io/badge/🔧%20TinCAN%20Controller-Open%20App-blue?style=for-the-badge&logo=browser&logoColor=white"

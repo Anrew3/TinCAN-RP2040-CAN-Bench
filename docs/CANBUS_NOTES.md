@@ -1,7 +1,7 @@
 # Ford S650 / SYNC CAN Bus Messages
 
 Consolidated reference combining:
-1. **Software** — CAN IDs transmitted by the TinCAN-CANBUS-Simulator firmware and the
+1. **Software** — CAN IDs transmitted by the TinCAN-RP2040-CAN-Bench firmware and the
    related RP2040/ESP32 CAN projects (`can_sim`, `CanBus.ino`, `WFCanBus.ino`,
    `CANBUSWControl.ino`, `RP2040CAN*`, etc.), as documented in
    `~/Documents/TinCAN/can_sim/canbus_codes.txt`.

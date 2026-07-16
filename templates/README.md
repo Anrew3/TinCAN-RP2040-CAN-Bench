@@ -160,4 +160,4 @@ We welcome contributions! To submit a new template:
 
 - [CAN Bus Basics](https://en.wikipedia.org/wiki/CAN_bus)
 - [Ford CAN Bus Research](https://forscan.org)
-- [TinCAN GitHub Repository](https://github.com/yourusername/TinCAN-CANBUS-Simulator)
+- [TinCAN GitHub Repository](https://github.com/Anrew3/TinCAN-RP2040-CAN-Bench)
