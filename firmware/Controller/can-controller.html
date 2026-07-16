@@ -3872,6 +3872,15 @@
             // Firmware settings
             LATEST_FIRMWARE_VERSION: '2.1.0',
 
+            // Path (relative to repo root) of the compiled UF2 the flasher
+            // serves as "Official Firmware". This is exactly where the Arduino
+            // IDE's "Export Compiled Binary" writes it, so you just export,
+            // commit, and push - no copying.
+            //   ⚠️ The build subfolder is named after your BOARD. If you don't
+            //   select "Adafruit Feather RP2040 CAN", change the folder below to
+            //   match the one that appears in firmware/can_sim/build/.
+            FIRMWARE_PATH: 'firmware/can_sim/build/rp2040.rp2040.adafruit_feather_can/can_sim.ino.uf2',
+
             // URLs (auto-generated from repo settings)
             get REPO_URL() {
                 return `https://github.com/${this.REPO_OWNER}/${this.REPO_NAME}`;
@@ -3880,7 +3889,7 @@
                 return `https://raw.githubusercontent.com/${this.REPO_OWNER}/${this.REPO_NAME}/${this.REPO_BRANCH}`;
             },
             get FIRMWARE_URL() {
-                return `${this.RAW_URL}/firmware/can_sim.uf2`;
+                return `${this.RAW_URL}/${this.FIRMWARE_PATH}`;
             },
             get TEMPLATES_URL() {
                 return `${this.RAW_URL}/templates`;
@@ -5878,7 +5887,9 @@
         // Use CONFIG values (can also use local file as fallback)
         const LATEST_FIRMWARE_VERSION = CONFIG.LATEST_FIRMWARE_VERSION;
         const OFFICIAL_FIRMWARE_URL = CONFIG.FIRMWARE_URL;
-        const LOCAL_FIRMWARE_URL = '../can_sim.uf2';
+        // Same file, resolved relative to this page (firmware/Controller/) for
+        // when the flasher is served locally.
+        const LOCAL_FIRMWARE_URL = '../' + CONFIG.FIRMWARE_PATH.replace(/^firmware\//, '');
 
         // Firmware update state (matching original 5-step flasher)
         let fwCurrentStep = 0;

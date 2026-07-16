@@ -24,22 +24,28 @@ this core — no separate install.
 (*Tools → Flash Size → e.g. `2MB (Sketch: 1MB, FS: 1MB)`*); templates and
 settings persist there.
 
-### Publishing the official firmware
+### Publishing the official firmware (export → commit → push)
 
-The web flasher's "Official Firmware" button fetches **`firmware/can_sim.uf2`**
-over HTTP from GitHub, so it can only serve a UF2 that's committed to the repo —
-it can't read the local `build/` folder (that's git-ignored and never pushed).
-After building, get your fresh UF2 into that committed spot:
+The web flasher's "Official Firmware" button fetches the compiled UF2 straight
+from the Arduino **build folder**, so there's nothing to copy:
 
-1. *Sketch → Export Compiled Binary* (writes `firmware/can_sim/build/<board>/can_sim.ino.uf2`).
-2. Run **`./firmware/publish-firmware.sh`** — it finds the newest built `.uf2`
-   and copies it to `firmware/can_sim.uf2` for you (no manual dragging).
-3. `git add firmware/can_sim.uf2 && git commit -m "Update firmware" && git push`.
+1. *Sketch → Export Compiled Binary* — writes
+   `firmware/can_sim/build/<board>/can_sim.ino.uf2`.
+2. `git add firmware/can_sim/build && git commit -m "Update firmware" && git push`.
 
-Once pushed, the hosted flasher serves your new build. Only the `.uf2` matters;
-the `.elf`/`.bin`/`.hex`/`.map` build artifacts are git-ignored and can be
-ignored. (Users can always flash a local build directly with the flasher's
-**Custom UF2 File** button without any of this.)
+`.gitignore` tracks **only** that `.uf2` inside `build/` and ignores everything
+else (`.elf`/`.bin`/`.hex`/`.map`, object files, core cache), so `git status`
+shows just the one file to push. Re-exporting the same board overwrites the same
+file, so it's always a clean one-file change.
+
+> **Board name matters.** The `<board>` subfolder is named after your board
+> selection. This repo is set up for the **Adafruit Feather RP2040 CAN**
+> (`rp2040.rp2040.adafruit_feather_can`). If you pick a different board, update
+> `CONFIG.FIRMWARE_PATH` in `firmware/Controller/can-controller.html` to match
+> the folder that appears in `firmware/can_sim/build/`.
+
+(Users can always flash a local build directly with the flasher's **Custom UF2
+File** button without any of this.)
 
 ## Serial protocol (9600 baud, newline-terminated)
 

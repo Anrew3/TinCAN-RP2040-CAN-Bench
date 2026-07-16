@@ -27,9 +27,12 @@ notes-personal.*
 ehthumbs.db
 Thumbs.db
 
-# Build outputs (Arduino export-compiled-binary etc.)
-# Note: .uf2 is intentionally NOT ignored - firmware/can_sim.uf2 is committed.
-build/
+# Build outputs (Arduino "Export Compiled Binary").
+# Track ONLY the exported .uf2 inside the sketch build folder (the web flasher
+# serves it); ignore everything else in there and the heavy artifacts anywhere.
+/firmware/can_sim/build/**
+!/firmware/can_sim/build/**/
+!/firmware/can_sim/build/**/*.uf2
 *.elf
 *.hex
 *.bin
