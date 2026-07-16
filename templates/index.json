@@ -1,0 +1,8 @@
+{
+  "$comment": "Template catalog for the TinCAN web controller. 'official' templates live in templates/<id>.json and are curated/tested; 'community' templates live in templates/community/<id>.json and are contributor-submitted. Add a template by dropping its JSON in the right folder and listing its id here.",
+  "official": [
+    "mustang_s550",
+    "f150_13gen"
+  ],
+  "community": []
+}

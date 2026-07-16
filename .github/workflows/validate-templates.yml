@@ -1,0 +1,33 @@
+name: Validate Templates
+
+# Runs on any change under templates/ so contributor PRs get schema-checked
+# automatically before a maintainer reviews them.
+on:
+  push:
+    paths:
+      - 'templates/**'
+      - 'scripts/validate_templates.py'
+      - '.github/workflows/validate-templates.yml'
+  pull_request:
+    paths:
+      - 'templates/**'
+      - 'scripts/validate_templates.py'
+      - '.github/workflows/validate-templates.yml'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install jsonschema
+
+      - name: Validate templates against schema + manifest
+        run: python scripts/validate_templates.py
