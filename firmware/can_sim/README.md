@@ -111,6 +111,13 @@ firmware change.
 | `SIGNAL:<name>:<state>` | Set a signal to a named state (e.g. `SIGNAL:ABS:FLASH`) |
 | `SIGNAL:<name>:<number>` | Set a raw byte value for continuous controls (e.g. `SIGNAL:BACKLIGHT:12`) |
 | `GEAR:<P\|R\|N\|D>` | Shorthand for the `GEAR` signal (reverse drives `0x171`) |
+| `BODY:WAKE\|LIGHT` | Switch the `0x3B3` frame between the SYNC **wake** payload (boots a dormant head unit — the default) and the **lighting** base (headlight/turn-signal/door controls) |
+
+**Booting a SYNC head unit:** the Ford templates send the wake sequence
+continuously — `0x3B3` = `41 00 00 00 4C 00 00 00` (via `blinkers.wakeBase`),
+`0x048` = `00 00 00 00 07 00 E0 00`, and `0x109` = `00 03 01 00 00 00 00 28`
+(both `background`). They start in `BODY:WAKE`; send `BODY:LIGHT` (or use the
+0x3B3 Frame toggle in the web UI) once the unit is up to control lighting.
 
 The Ford templates ship: `GEAR`, `HEADLAMP`, `MODE` (DRL/night/hazard),
 `BACKLIGHT`, `DAYNIGHT`, `DOORS`, `ABS`, `TRACTION`. Each signal's `canId` must

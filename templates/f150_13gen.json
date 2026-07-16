@@ -97,6 +97,8 @@
     "canId": "0x3B3",
     "canIdAlt": "0x3B2",
     "base": "40 48 C0 10 10 00 00 02",
+    "wakeBase": "41 00 00 00 4C 00 00 00",
+    "wakeDefault": true,
     "intervalMs": 10,
     "blinkRateMs": 500,
     "left": {
@@ -134,6 +136,12 @@
       "data": "00 00 00 00 00 00 00 00",
       "intervalMs": 10,
       "description": "Gear / reverse (Sync 4) - overlaid by GEAR signal"
+    },
+    {
+      "canId": "0x048",
+      "data": "00 00 00 00 07 00 E0 00",
+      "intervalMs": 10,
+      "description": "C1MCA turn-on - SYNC wake sequence"
     }
   ],
   "signals": [

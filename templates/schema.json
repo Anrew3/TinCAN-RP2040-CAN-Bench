@@ -205,7 +205,18 @@
         },
         "base": {
           "type": "string",
-          "pattern": "^([0-9A-Fa-f]{2}\\s?)+$"
+          "pattern": "^([0-9A-Fa-f]{2}\\s?)+$",
+          "description": "Lighting base frame (used in BODY:LIGHT mode)"
+        },
+        "wakeBase": {
+          "type": "string",
+          "pattern": "^([0-9A-Fa-f]{2}\\s?)+$",
+          "description": "Optional CGEA/network wake payload for the same frame, used to boot a dormant SYNC head unit (Ford 0x3B3 = 41 00 00 00 4C 00 00 00). Switch at runtime with BODY:WAKE|LIGHT."
+        },
+        "wakeDefault": {
+          "type": "boolean",
+          "default": true,
+          "description": "If a wakeBase is present, start in WAKE mode so the head unit powers on"
         },
         "intervalMs": {
           "type": "integer",

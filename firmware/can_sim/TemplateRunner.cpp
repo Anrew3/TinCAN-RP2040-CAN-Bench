@@ -25,6 +25,7 @@ TemplateRunner::TemplateRunner() {
     rightBlinkerActive = false;
     blinkerState = false;
     lastBlinkerToggle = 0;
+    bodyWakeMode = false;
 
     buttonActive = false;
     memset(currentButtonData, 0, sizeof(currentButtonData));
@@ -58,6 +59,16 @@ void TemplateRunner::setTemplate(Template* t) {
         prepareVINMessages();
         applySignalDefaults();
         startBootSequence();
+        // Start in wake mode if the template defines a wake payload
+        bodyWakeMode = tmpl->blinkerHasWake && tmpl->blinkerWakeDefault;
+    }
+}
+
+void TemplateRunner::setBodyWakeMode(bool wake) {
+    bodyWakeMode = wake;
+    if (Serial) {
+        Serial.print("[Body] 0x3B3 mode = ");
+        Serial.println(wake ? "WAKE" : "LIGHT");
     }
 }
 
@@ -239,6 +250,17 @@ void TemplateRunner::handleCommand(String* tokens, int count) {
         if (!setSignal("GEAR", tokens[1].c_str())) {
             if (Serial) Serial.println("[Runner] No GEAR signal in this template");
         }
+        return;
+    }
+
+    // BODY:WAKE|LIGHT - switch the 0x3B3 frame between the SYNC wake payload
+    // and the lighting base
+    if (cmd == "BODY" && count >= 2) {
+        String m = tokens[1];
+        m.toUpperCase();
+        if (m == "WAKE") setBodyWakeMode(true);
+        else if (m == "LIGHT" || m == "LIGHTING") setBodyWakeMode(false);
+        else if (Serial) Serial.println("Usage: BODY:WAKE|LIGHT");
         return;
     }
 
@@ -494,6 +516,16 @@ void TemplateRunner::sendVINMessages() {
 
 void TemplateRunner::sendBlinkerMessages(unsigned long now) {
     if (!canBus || !tmpl) return;
+
+    // WAKE mode: send the raw wake payload on 0x3B3 only (matches the v1
+    // boot sketch that turns dormant SYNC head units on). No blinker bits,
+    // no signal overlays, no 0x3B2 mirror - the module wants this exact frame.
+    if (bodyWakeMode && tmpl->blinkerHasWake) {
+        byte wake[8];
+        memcpy(wake, tmpl->blinkerWakeBase, 8);
+        canBus->sendMsgBuf(tmpl->blinkerCanId, 0, 8, wake);
+        return;
+    }
 
     // Toggle blinker state
     if (now - lastBlinkerToggle >= tmpl->blinkerBlinkRateMs) {

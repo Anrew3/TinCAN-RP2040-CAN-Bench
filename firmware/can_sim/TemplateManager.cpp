@@ -539,6 +539,13 @@ bool TemplateManager::parseJsonToTemplate(const char* json, size_t len, Template
             parseHexBytes(baseStr.c_str(), t->blinkerBase, 8);
         }
 
+        if (!blinkers["wakeBase"].isNull()) {
+            String wakeStr = blinkers["wakeBase"].as<String>();
+            parseHexBytes(wakeStr.c_str(), t->blinkerWakeBase, 8);
+            t->blinkerHasWake = true;
+            t->blinkerWakeDefault = blinkers["wakeDefault"] | true;
+        }
+
         if (!blinkers["left"].isNull()) {
             JsonObject left = blinkers["left"];
             t->blinker.leftByte = left["byte"] | 0;
@@ -723,6 +730,11 @@ void TemplateManager::templateToJson(const Template* t, char* buffer, size_t buf
     blinkers["base"] = hexBuf;
     blinkers["intervalMs"] = t->blinkerIntervalMs;
     blinkers["blinkRateMs"] = t->blinkerBlinkRateMs;
+    if (t->blinkerHasWake) {
+        bytesToHexString(t->blinkerWakeBase, 8, hexBuf, sizeof(hexBuf));
+        blinkers["wakeBase"] = hexBuf;
+        blinkers["wakeDefault"] = t->blinkerWakeDefault;
+    }
 
     JsonObject left = blinkers["left"].to<JsonObject>();
     left["byte"] = t->blinker.leftByte;
