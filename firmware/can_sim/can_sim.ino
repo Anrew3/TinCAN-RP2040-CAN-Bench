@@ -196,12 +196,12 @@ void setup() {
         Serial.println("  TPMS:FL:<psi>        - Set tire pressure");
         Serial.println("  BLINKER:LEFT/RIGHT/OFF/BOTH");
         Serial.println("  BODY:WAKE|LIGHT      - 0x3B3 SYNC-wake vs lighting mode");
-        Serial.println("  GEAR:<P|R|N|D>       - Set gear (reverse via 0x171)");
+        Serial.println("  GEAR:<state>         - Set gear on 0x171 (PARK/REVERSE/NEUTRAL/DRIVE/SPORT/NONE)");
         Serial.println("  SIGNAL:<name>:<state> - Set a template signal");
         Serial.println("     (e.g. SIGNAL:ABS:FLASH, SIGNAL:HEADLAMP:ON,");
         Serial.println("      SIGNAL:DAYNIGHT:NIGHT, SIGNAL:BACKLIGHT:12)");
         Serial.println("  VIN:<17chars>        - Set VIN");
-        Serial.println("  UP/DOWN/LEFT/RIGHT/OK/SETTINGS");
+        Serial.println("  <BUTTON>             - Press a template button (S550: UP/DOWN/OK/BACK/SETTINGS/VIEW/HUD/MEDIA/NAVI)");
         Serial.println();
         Serial.println("Custom CAN:");
         Serial.println("  CAN:<id> <data>:<count>:<interval>");

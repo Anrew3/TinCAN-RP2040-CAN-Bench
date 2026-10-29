@@ -19,10 +19,10 @@ Consolidated reference combining:
 
 | CAN ID | Function | Example payload | Source |
 |--------|----------|-----------------|--------|
-| `0x81`  | Steering-wheel / cluster buttons | `00 00 00 00 00 00 00 00` (idle) | Software |
+| `0x81`  | Steering-wheel / cluster buttons | `00 00 00 00 00 00 00 00` (idle) | Software + cluster firmware |
 | `0x109` | Heartbeat / misc status (gear?) | `00 03 01 00 00 00 00 24` | Software + Notes |
 | `0x156` | Engine temperatures | `00 00 00 00 03 00 00 00` | Software + Notes |
-| `0x171` | Reverse gear (Sync 4) | `36 32 00 00 00 00 00 00` | Notes only |
+| `0x171` | Gear lever P/R/N/D/S (+ M/S gear number) | `04 60 00 00 00 00 00 00` (Drive) | Notes + cluster firmware |
 | `0x202` | Vehicle speed | `04 00 00 00 60 00 25 44` | Software + Notes |
 | `0x204` | Engine RPM | `00 00 00 09 C4 00 00 00` | Software + Notes |
 | `0x3B2` / `0x3B3` | Lighting, turn signals, doors, backlight, day/night | `40 48 00 10 10 00 00 02` | Software + Notes |
@@ -39,8 +39,22 @@ From `canbus_codes.txt` / `can_sim` firmware. IDs used by model traffic:
 
 ### `0x81` — Steering-wheel / cluster buttons
 - Rate: 10 ms. Pressed frame held ~100 ms, then returns to all-zeros.
-- Byte 0 = button code: `UP=0x08`, `DOWN=0x01`, `LEFT=0x02`, `RIGHT=0x04`, `OK=0x10`, `SETTINGS=0x46`
-- Byte 1 = `0x01` only for SETTINGS, else `0x00`; Bytes 2–7 = `0x00`
+- Key bits, read from the S550 12.3" cluster MCU firmware (0x81 reader `FUN_0008bd06`):
+
+  | key | byte | mask | key | byte | mask |
+  |-----|------|------|-----|------|------|
+  | UP | B0 | `0x08` | SETTINGS | B1 | `0x01` |
+  | DOWN | B0 | `0x01` | HUD | B1 | `0x20` |
+  | OK | B0 | `0x10` | MEDIA | B1 | `0x08` |
+  | BACK | B1 | `0x40` | NAVI | B1 | `0x04` |
+  | VIEW | B2 | `0x80` | | | |
+
+- The old `LEFT=0x02` / `RIGHT=0x04` (B0) have **no button in the cluster MCU**, so they never
+  reach the display. The S550 template no longer sends them; the F-150 template keeps them.
+- The old `SETTINGS = 46 01` also set LEFT, RIGHT and an unmapped B0 bit `0x40`; SETTINGS is
+  B1 `0x01` alone.
+- Holding: the cluster counts hold levels itself while a key bit stays set, so a long press
+  is simply a longer hold of the same frame.
 
 ### `0x202` — Vehicle speed (mph)
 - Rate: 100 ms
@@ -78,7 +92,8 @@ From `canbus_codes.txt` / `can_sim` firmware. IDs used by model traffic:
 
 **Serial control commands:** `RPM:<value>`, `SPEED:<mph>`, `TIRE:<name>:<psi>`,
 `VIN:<17chars>`, `TEMP:<COOLANT|OIL>:<tempF>`, `BLINKER:<LEFT|RIGHT|BOTH|OFF>`,
-`HAZARDS`, `UP`, `DOWN`, `LEFT`, `RIGHT`, `OK`, `SETTINGS`.
+`HAZARDS`, `GEAR:<state>`, and any button the template defines (S550: `UP`, `DOWN`, `OK`,
+`BACK`, `SETTINGS`, `VIEW`, `HUD`, `MEDIA`, `NAVI`).
 
 ---
 
@@ -91,6 +106,21 @@ From `canbus_codes.txt` / `can_sim` firmware. IDs used by model traffic:
 ### `0x171` — Reverse (Sync 4)  `(36 32 00 00 00 00 00 00)`
 - **Byte 0:** `36` = Reverse — **must match Byte 1**
 - **Byte 1:** `32` = Reverse — **must match Byte 0**
+
+> **Superseded by the cluster firmware decode.** The S550 12.3" cluster MCU reads 0x171 in
+> `FUN_00083a1a` (B0) and `FUN_00089b78` (B1/B2); the lever logic is `FUN_0004cfb0`:
+>
+> | field | meaning |
+> |-------|---------|
+> | B0 bits 0–1 | mode: 1 manual (M), 2 SelectShift (S); 3 = invalid |
+> | B0 bits 2–3 | **lever valid — must be 1** |
+> | B0 bits 4–7 | gear number 1–10 for the M/S display |
+> | B1 bits 5–7 | **lever: 0 P, 1 R, 2 N, 3 D, 4 S** |
+>
+> So P = `04 00`, R = `04 20`, N = `04 40`, D = `04 60`, S = `04 80`, no gear = `00 00`.
+> `36 32` works for Reverse only because B0 bits 2–3 = 1 and B1 bits 5–7 = 1; it also sets
+> SelectShift gear 3 (B0 high nibble `3`, mode `2`). The old `00 00` for P/N/D is "lever not
+> valid", so the cluster showed no gear.
 
 ### `0x202` — Speed (Sync 4)  `(04 00 00 00 60 00 25 44)`
 - **Byte 4:** must be `6x` (`60`) for the speed gauge to work
@@ -132,7 +162,7 @@ these signals; any template can define its own.
 
 | Feature | CAN ID / byte | Signal / command | Status |
 |---------|---------------|------------------|--------|
-| Reverse / gear | `0x171` B0/B1 (`36 32`) | `GEAR:R` (gear selector) | ✅ implemented (0x171 now transmitted) |
+| Gear P/R/N/D/S | `0x171` B0 bits 2–3 = 1, B1 bits 5–7 = lever | `GEAR:PARK\|REVERSE\|NEUTRAL\|DRIVE\|SPORT\|NONE` (gear selector) | ✅ firmware-derived encoding (S550 template 1.1.0) — verify on the bench |
 | ABS light | `0x416` B6 | `SIGNAL:ABS:OFF\|SOLID\|SLOW\|FAST` | ✅ implemented |
 | Traction light | `0x416` B5 | `SIGNAL:TRACTION:OFF\|SOLID\|FLASH` | ✅ implemented |
 | Headlights (B0+B1 pair) | `0x3B2/3` B0+B1 | `SIGNAL:HEADLIGHTS:DRL\|ON` | ✅ implemented |
@@ -166,13 +196,14 @@ three are sent **continuously**:
 
 | ID | Firmware default | Notes | Note |
 |----|------------------|-------|------|
-| `0x202` speed scale | `mph × 159` | `mph × 175` | Now a template field — set per vehicle once confirmed on hardware |
+| `0x202` speed scale | `mph × 159` | `mph × 175` | Now a template field. The cluster firmware reads B6–B7 as **0.01 km/h** (a real car sends `mph × 160.934`); its speedo curve reads ~1 % high, which `× 159` happens to cancel |
 | `0x109` last byte | `...00 28` | `...00 24` | Byte 7 left as firmware default (`28`) by request; adjust in the template if `24` proves correct |
 | `0x3B5` byte map | B1=DF, B3=PF, B5=PR, B7=DR | B1=FL, B3=FR, B5=RR, B7=RL | Same byte positions, corner-naming differs (PR vs RR, DR vs RL) |
 
 ---
 
-*Generated from software analysis + 3 handwritten note photos. The `0x171`
-reverse frame, the `0x3B2/3` sub-fields (backlight, doors, day/night, headlamp,
+*Generated from software analysis + 3 handwritten note photos, with the `0x81` key bits and
+`0x171` gear fields later corrected from the S550 cluster MCU firmware. The `0x171`
+gear frame, the `0x3B2/3` sub-fields (backlight, doors, day/night, headlamp,
 mode), and the `0x416` ABS/traction decode are now implemented as template
 signals; only the value discrepancies above remain to confirm on hardware.*

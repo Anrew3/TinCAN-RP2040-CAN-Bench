@@ -1052,6 +1052,7 @@
         .gear-selector[data-gear="R"]::before { transform: translateY(32px); }
         .gear-selector[data-gear="N"]::before { transform: translateY(64px); }
         .gear-selector[data-gear="D"]::before { transform: translateY(96px); }
+        .gear-selector[data-gear="S"]::before { transform: translateY(128px); }
 
         .gear-btn {
             width: 42px;
@@ -1110,6 +1111,44 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
+        }
+
+        /* D-pad keys the current template doesn't define */
+        .dpad-btn.unmapped {
+            opacity: 0.35;
+            cursor: not-allowed;
+        }
+
+        /* Extra template keys (e.g. S550 BACK/VIEW/HUD) under the D-pad */
+        .wheel-keys {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 5px;
+            margin-top: 8px;
+            max-width: 170px;
+        }
+
+        .wheel-key {
+            background: var(--bg-elevated);
+            border: none;
+            border-radius: var(--radius-sm);
+            color: var(--text-secondary);
+            font-family: inherit;
+            font-size: 10px;
+            font-weight: 600;
+            padding: 6px 8px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .wheel-key:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        .wheel-key:active {
+            transform: scale(0.95);
         }
 
         /* Custom Buttons Container (in controls row) */
@@ -3157,6 +3196,7 @@
                             <button class="gear-btn" data-gear="R">R</button>
                             <button class="gear-btn" data-gear="N">N</button>
                             <button class="gear-btn" data-gear="D">D</button>
+                            <button class="gear-btn" data-gear="S" id="gearBtnS" style="display: none;">S</button>
                         </div>
                     </div>
 
@@ -3182,6 +3222,7 @@
                                 Menu
                             </button>
                         </div>
+                        <div class="wheel-keys" id="wheelKeys"></div>
                     </div>
 
                     <!-- Custom Buttons (dynamically shown when template has custom buttons) -->
@@ -4421,7 +4462,7 @@
 
             const btnMappings = document.getElementById('buttonMappings');
             btnMappings.innerHTML = '';
-            const buttons = ['UP', 'DOWN', 'LEFT', 'RIGHT', 'OK', 'SETTINGS', 'DEFAULT'];
+            const buttons = [...new Set([...DPAD_KEYS, ...Object.keys(template.buttons?.commands || {})]), 'DEFAULT'];
             buttons.forEach(btn => {
                 const value = btn === 'DEFAULT'
                     ? (template.buttons?.default || '00 00 00 00 00 00 00 00')
@@ -4500,9 +4541,13 @@
             };
 
             // Get button commands
-            ['UP', 'DOWN', 'LEFT', 'RIGHT', 'OK', 'SETTINGS'].forEach(btn => {
-                const input = document.querySelector(`[data-btn="${btn}"]`);
-                if (input) template.buttons.commands[btn] = input.value;
+            // Every key shown in the editor (standard + template-specific);
+            // all-zero entries are keys this vehicle doesn't have.
+            document.querySelectorAll('#buttonMappings [data-btn]').forEach(input => {
+                const btn = input.dataset.btn;
+                if (btn === 'DEFAULT') return;
+                if (/^[0\s]*$/.test(input.value)) return;
+                template.buttons.commands[btn] = input.value;
             });
 
             templates[targetId] = template;
@@ -4898,7 +4943,48 @@
         }
 
         // Render custom buttons in the main Controls section
+        // Keys on the D-pad; any other template button gets a Wheel keys chip
+        const DPAD_KEYS = ['UP', 'DOWN', 'LEFT', 'RIGHT', 'OK', 'SETTINGS'];
+
+        // Match the steering-wheel controls to the current template: dim
+        // D-pad keys it doesn't define, add chips for its extra keys, and
+        // show the S gear only if its GEAR signal has a SPORT state.
+        function renderTemplateKeys() {
+            const template = templates[currentTemplateId];
+            const commands = template?.buttons?.commands || {};
+
+            document.querySelectorAll('.dpad-btn[data-command]').forEach(btn => {
+                const mapped = !!commands[btn.dataset.command];
+                btn.classList.toggle('unmapped', !mapped);
+                btn.title = mapped ? '' : `${btn.dataset.command} is not defined by this template`;
+            });
+
+            const host = document.getElementById('wheelKeys');
+            host.innerHTML = '';
+            Object.keys(commands).filter(k => !DPAD_KEYS.includes(k)).forEach(name => {
+                const el = document.createElement('button');
+                el.className = 'wheel-key';
+                el.textContent = name;
+                el.addEventListener('click', () => {
+                    const cmd = currentTemplate.getButtonCommand(name);
+                    if (cmd) sendCommand(cmd);
+                });
+                host.appendChild(el);
+            });
+
+            const gear = (template?.signals || []).find(sg => sg.name?.toUpperCase() === 'GEAR');
+            const hasSport = !!gear?.states && Object.keys(gear.states).some(k => k.toUpperCase() === 'SPORT');
+            document.getElementById('gearBtnS').style.display = hasSport ? '' : 'none';
+            const selector = document.getElementById('gearSelector');
+            if (!hasSport && selector.dataset.gear === 'S') {
+                document.querySelectorAll('.gear-btn').forEach(b => b.classList.remove('active'));
+                document.querySelector('.gear-btn[data-gear="P"]').classList.add('active');
+                selector.dataset.gear = 'P';
+            }
+        }
+
         function renderLiveCustomButtons() {
+            renderTemplateKeys();
             const container = document.getElementById('customButtonsContainer');
             const grid = document.getElementById('customButtonsLiveGrid');
             const template = templates[currentTemplateId];
@@ -5494,7 +5580,7 @@
                     selector.dataset.gear = gear;
 
                     // Drive the template's GEAR signal (0x171 reverse, etc.)
-                    const GEAR_STATES = { P: 'PARK', R: 'REVERSE', N: 'NEUTRAL', D: 'DRIVE' };
+                    const GEAR_STATES = { P: 'PARK', R: 'REVERSE', N: 'NEUTRAL', D: 'DRIVE', S: 'SPORT' };
                     if (isConnected) {
                         sendCommand(`GEAR:${GEAR_STATES[gear] || gear}`);
                     } else {

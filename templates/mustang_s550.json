@@ -2,7 +2,7 @@
   "$schema": "./schema.json",
   "name": "Ford Mustang S550",
   "id": "mustang_s550",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": "TinCAN Community",
   "description": "CAN bus template for Ford Mustang S550 platform (2015-2023). Includes support for instrument cluster, steering wheel controls, TPMS, and turn signals.",
 
@@ -21,11 +21,15 @@
     "commands": {
       "UP": "08 00 00 00 00 00 00 00",
       "DOWN": "01 00 00 00 00 00 00 00",
-      "LEFT": "02 00 00 00 00 00 00 00",
-      "RIGHT": "04 00 00 00 00 00 00 00",
       "OK": "10 00 00 00 00 00 00 00",
-      "SETTINGS": "46 01 00 00 00 00 00 00"
-    }
+      "BACK": "00 40 00 00 00 00 00 00",
+      "SETTINGS": "00 01 00 00 00 00 00 00",
+      "VIEW": "00 00 80 00 00 00 00 00",
+      "HUD": "00 20 00 00 00 00 00 00",
+      "MEDIA": "00 08 00 00 00 00 00 00",
+      "NAVI": "00 04 00 00 00 00 00 00"
+    },
+    "notes": "Key bits from the cluster MCU's 0x81 reader. B0 0x02/0x04 (old LEFT/RIGHT) have no MCU button and never reach the display; SETTINGS is B1 0x01 alone."
   },
 
   "gauges": {
@@ -150,8 +154,8 @@
       "canId": "0x171",
       "startByte": 0,
       "default": "PARK",
-      "states": { "PARK": "00 00", "REVERSE": "36 32", "NEUTRAL": "00 00", "DRIVE": "00 00" },
-      "description": "Gear selector; REVERSE sets 0x171 B0/B1"
+      "states": { "PARK": "04 00", "REVERSE": "04 20", "NEUTRAL": "04 40", "DRIVE": "04 60", "SPORT": "04 80", "NONE": "00 00" },
+      "description": "Gear lever on 0x171: B0 bits 2-3 = 1 (lever valid), B1 bits 5-7 = lever (0 P, 1 R, 2 N, 3 D, 4 S). B0 bits 0-1 = mode (1 M, 2 S) and B0 bits 4-7 = gear number for the M/S display. 00 00 = no gear."
     },
     {
       "name": "HEADLIGHTS",
