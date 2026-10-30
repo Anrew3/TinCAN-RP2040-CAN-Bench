@@ -94,7 +94,7 @@ then `TEMPLATE_UPLOAD_END`. On success: `TEMPLATE_UPLOAD_OK`. On CRC failure:
 
 `RPM:<v>`, `SPEED:<v>`, any gauge name defined by the template, `TEMP:COOLANT:<F>`,
 `TEMP:OIL:<F>`, `TPMS:<tire>:<psi>`, `BLINKER:LEFT|RIGHT|BOTH|OFF`, `VIN:<17 chars>`,
-button names (`UP`/`DOWN`/`LEFT`/`RIGHT`/`OK`/`SETTINGS`).
+any button name the template defines (S550: `UP`/`DOWN`/`OK`/`BACK`/`SETTINGS`/`VIEW`/`HUD`/`MEDIA`/`NAVI`; F-150: `UP`/`DOWN`/`LEFT`/`RIGHT`/`OK`/`SETTINGS`).
 
 Gauge output scaling (e.g. speed `mph × 159`), min/max, and offset are template
 fields (`scale`, `offset`, `min`, `max`) and editable in the web Template Editor.
@@ -110,7 +110,7 @@ firmware change.
 |---------|-------------|
 | `SIGNAL:<name>:<state>` | Set a signal to a named state (e.g. `SIGNAL:ABS:FLASH`) |
 | `SIGNAL:<name>:<number>` | Set a raw byte value for continuous controls (e.g. `SIGNAL:BACKLIGHT:12`) |
-| `GEAR:<P\|R\|N\|D>` | Shorthand for the `GEAR` signal (reverse drives `0x171`) |
+| `GEAR:<state>` | Shorthand for `SIGNAL:GEAR:<state>` (S550: `PARK`/`REVERSE`/`NEUTRAL`/`DRIVE`/`SPORT`/`NONE` on `0x171`) |
 | `BODY:WAKE\|LIGHT` | Switch the `0x3B3` frame between the SYNC **wake** payload (boots a dormant head unit — the default) and the **lighting** base (headlight/turn-signal/door controls) |
 
 **Booting a SYNC head unit:** the Ford templates send the wake sequence
@@ -131,7 +131,7 @@ background message). Example:
     "states": { "OFF": "00", "SOLID": "40", "SLOW": "80", "FAST": "D0" } },
   { "name": "GEAR", "canId": "0x171", "startByte": 0,
     "default": "PARK",
-    "states": { "PARK": "00 00", "REVERSE": "36 32", "NEUTRAL": "00 00", "DRIVE": "00 00" } }
+    "states": { "PARK": "04 00", "REVERSE": "04 20", "NEUTRAL": "04 40", "DRIVE": "04 60", "SPORT": "04 80" } }
 ]
 ```
 

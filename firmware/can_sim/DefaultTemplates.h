@@ -49,7 +49,7 @@ void initMustangS550Template(Template* t) {
     // Metadata
     strcpy(t->id, "mustang_s550");
     strcpy(t->name, "Ford Mustang S550");
-    strcpy(t->version, "1.0.0");
+    strcpy(t->version, "1.1.0");
     t->isOfficial = true;
 
     // Buttons - CAN ID 0x81
@@ -58,8 +58,10 @@ void initMustangS550Template(Template* t) {
     t->buttonIntervalMs = 10;
     memset(t->buttonDefault, 0, 8);
 
-    // Button definitions
-    t->numButtons = 6;
+    // Button definitions. Key bits from the cluster MCU's 0x81 reader
+    // (FUN_0008bd06). B0 0x02/0x04 (the old LEFT/RIGHT) have no MCU button
+    // and never reach the display, so they are not listed.
+    t->numButtons = 9;
 
     strcpy(t->buttons[0].name, "UP");
     t->buttons[0].data[0] = 0x08;
@@ -67,18 +69,26 @@ void initMustangS550Template(Template* t) {
     strcpy(t->buttons[1].name, "DOWN");
     t->buttons[1].data[0] = 0x01;
 
-    strcpy(t->buttons[2].name, "LEFT");
-    t->buttons[2].data[0] = 0x02;
+    strcpy(t->buttons[2].name, "OK");
+    t->buttons[2].data[0] = 0x10;
 
-    strcpy(t->buttons[3].name, "RIGHT");
-    t->buttons[3].data[0] = 0x04;
+    strcpy(t->buttons[3].name, "BACK");
+    t->buttons[3].data[1] = 0x40;
 
-    strcpy(t->buttons[4].name, "OK");
-    t->buttons[4].data[0] = 0x10;
+    strcpy(t->buttons[4].name, "SETTINGS");
+    t->buttons[4].data[1] = 0x01;
 
-    strcpy(t->buttons[5].name, "SETTINGS");
-    t->buttons[5].data[0] = 0x46;
-    t->buttons[5].data[1] = 0x01;
+    strcpy(t->buttons[5].name, "VIEW");
+    t->buttons[5].data[2] = 0x80;
+
+    strcpy(t->buttons[6].name, "HUD");
+    t->buttons[6].data[1] = 0x20;
+
+    strcpy(t->buttons[7].name, "MEDIA");
+    t->buttons[7].data[1] = 0x08;
+
+    strcpy(t->buttons[8].name, "NAVI");
+    t->buttons[8].data[1] = 0x04;
 
     // Gauges
     t->numGauges = 2;
@@ -212,8 +222,8 @@ void initMustangS550Template(Template* t) {
     t->backgroundMsgs[1].len = 8;
     t->backgroundMsgs[1].intervalMs = 10;
 
-    // Gear / reverse (0x171, Sync 4). Transmitted continuously so the GEAR
-    // signal below can overlay it; REVERSE needs B0=0x36 & B1=0x32.
+    // Gear lever (0x171). Transmitted continuously so the GEAR signal below
+    // can overlay it. All zeros = lever not valid (no gear shown).
     t->backgroundMsgs[2].canId = 0x171;
     for (int i = 0; i < 8; i++) t->backgroundMsgs[2].data[i] = 0x00;
     t->backgroundMsgs[2].len = 8;
@@ -237,12 +247,17 @@ void initMustangS550Template(Template* t) {
     // ---- Signals (named byte-span overrides on the frames above) ----
     t->numSignals = 0;
 
-    // Gear selector over 0x171
+    // Gear selector over 0x171 (cluster MCU readers 0x83a1a/0x89b78, lever
+    // logic 0x4cfb0): B0 bits 2-3 = 1 (lever valid), B1 bits 5-7 = lever
+    // (0 P, 1 R, 2 N, 3 D, 4 S). B0 bits 0-1 = mode (1 M, 2 S) and B0 bits
+    // 4-7 = gear number for the M/S display.
     SignalDef* gear = dtSignal(t, "GEAR", 0x171, 0);
-    dtState(gear, "PARK",    "00 00", true);
-    dtState(gear, "REVERSE", "36 32", false);
-    dtState(gear, "NEUTRAL", "00 00", false);
-    dtState(gear, "DRIVE",   "00 00", false);
+    dtState(gear, "PARK",    "04 00", true);
+    dtState(gear, "REVERSE", "04 20", false);
+    dtState(gear, "NEUTRAL", "04 40", false);
+    dtState(gear, "DRIVE",   "04 60", false);
+    dtState(gear, "SPORT",   "04 80", false);
+    dtState(gear, "NONE",    "00 00", false);
 
     // Lighting / body over the 0x3B3 (+0x3B2) frame
     // Headlight switch: B0 (headlamp) and B1 (DRL/night) move together on
