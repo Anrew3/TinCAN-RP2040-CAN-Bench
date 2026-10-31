@@ -339,6 +339,11 @@
             "maximum": 7,
             "description": "First byte written by each state"
           },
+          "mask": {
+            "type": "string",
+            "pattern": "^([0-9A-Fa-f]{2}\\s?)+$",
+            "description": "Optional per-byte bitmask (from startByte). Only these bits are written, so two signals can share a byte (e.g. S550 IGNITION F0 on 0x3B2 B0 alongside HEADLIGHTS). Omit to overwrite whole bytes."
+          },
           "states": {
             "type": "object",
             "description": "State name -> hex byte(s) written at startByte",

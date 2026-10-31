@@ -79,6 +79,11 @@ From `canbus_codes.txt` / `can_sim` firmware. IDs used by model traffic:
 - Base: Byte 4 = `0x10`, Byte 6 = `0x00`
 - Right turn: Byte 4 `|= 0x08` when active + blink ON; Left turn: Byte 6 `|= 0x40` when active + blink ON
 - *(Handwritten notes decode this ID in much more detail — see below.)*
+- **`0x3B2` B0 high nibble = ignition / cluster power mode** (S550 cluster MCU reader `0x89716` →
+  power-mode writer `0x70cd0`): `1` Off, `2` Accessory, `4` **Run (gauges live)**, `8` Start family; any
+  other value counts as Off. The lighting base `40 …` already says Run. The S550 template's `IGNITION`
+  signal (`SIGNAL:IGNITION:OFF|ACC|RUN|START`) sets just that nibble (mask `F0`). The cluster's `0x3B3`
+  reader only uses B4 and B6 bit 0, so ignition must come from `0x3B2`.
 
 ### `0x40A` — VIN broadcast (3 consecutive frames)
 - Rate: 200 ms (each of 3 parts repeats)
@@ -163,6 +168,8 @@ these signals; any template can define its own.
 | Feature | CAN ID / byte | Signal / command | Status |
 |---------|---------------|------------------|--------|
 | Gear P/R/N/D/S | `0x171` B0 bits 2–3 = 1, B1 bits 5–7 = lever | `GEAR:PARK\|REVERSE\|NEUTRAL\|DRIVE\|SPORT\|NONE` (gear selector) | ✅ firmware-derived encoding (S550 template 1.1.0) — verify on the bench |
+| Ignition / power mode | `0x3B2` B0 high nibble (1 Off, 2 Acc, 4 Run, 8 Start) | `SIGNAL:IGNITION:OFF\|ACC\|RUN\|START` (masked `F0`) | ✅ firmware-derived (S550 template 1.2.0) — verify on the bench |
+| Fuel | — | — | ❌ not on CAN for the S550: the cluster reads analog fuel senders. `0x207` is not among the IDs the cluster receives, so the S550 template no longer sends it |
 | ABS light | `0x416` B6 | `SIGNAL:ABS:OFF\|SOLID\|SLOW\|FAST` | ✅ implemented |
 | Traction light | `0x416` B5 | `SIGNAL:TRACTION:OFF\|SOLID\|FLASH` | ✅ implemented |
 | Headlights (B0+B1 pair) | `0x3B2/3` B0+B1 | `SIGNAL:HEADLIGHTS:DRL\|ON` | ✅ implemented |
@@ -191,6 +198,25 @@ three are sent **continuously**:
 > headlight/turn-signal/door controls take effect). Templates set it via
 > `blinkers.wakeBase` + `wakeDefault`. `0x048` and `0x109` are plain continuous
 > keepalives (`background`), no conflict.
+>
+> **Cluster note:** in `BODY:WAKE` TinCAN sends `0x3B3` only, no `0x3B2`. The S550 cluster takes its
+> power mode from `0x3B2` B0, so for a cluster-only bench use `BODY:LIGHT` (or check whether the bench's
+> hardwired ignition input keeps it awake).
+
+## S550: candidates not added yet (need pinning or a bench check)
+
+From the cluster-firmware CAN guide. The cluster reads these, but which byte carries which value is not
+pinned firmly enough to put in the template:
+
+| ID | what it drives | why not added |
+|----|----------------|---------------|
+| `0x42D` | MyGauges cylinder-head + inlet-air temp (raw ÷ 10) | the reader's value is a 10-bit field `B1[0..1] B2`, not the B0–B1 / B2–B3 the guide lists; which value is which isn't pinned |
+| `0x43E` | air-fuel ratio + cylinder-head temp (÷ 10) | two fields (13-bit `B5 B6[3..7]`, 10-bit `B6[0..1] B7`); not pinned which is AFR |
+| `0x46A` | inlet-air temp (÷ 10) + page config | byte not pinned |
+| `0x179` | distance-to-empty (km) + trip average speed | DTE field position not pinned (B2–B3 vs B6–B7) |
+| `0x42F` | combined speedo/tach/fuel/temp feed | field meanings not pinned |
+| `0x167` | warning lamps | bits not tied to named lamps yet |
+| `0x3B4` | per-tyre warning colour | fields not pinned |
 
 ## Remaining discrepancies (verify on hardware)
 

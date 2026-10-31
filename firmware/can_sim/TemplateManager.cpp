@@ -619,6 +619,12 @@ bool TemplateManager::parseJsonToTemplate(const char* json, size_t len, Template
             snprintf(s->name, sizeof(s->name), "%s", (const char*)(sig["name"] | ""));
             s->canId = strtoul(sig["canId"] | "0x000", nullptr, 0);
             s->startByte = sig["startByte"] | 0;
+            memset(s->mask, 0, 8);
+            s->maskLen = 0;
+            if (!sig["mask"].isNull()) {
+                String maskStr = sig["mask"].as<String>();
+                s->maskLen = parseHexBytes(maskStr.c_str(), s->mask, 8);
+            }
             s->numStates = 0;
             s->defaultState = 0xFF;
 
@@ -788,6 +794,10 @@ void TemplateManager::templateToJson(const Template* t, char* buffer, size_t buf
             snprintf(hexBuf, sizeof(hexBuf), "0x%03X", (unsigned int)s->canId);
             sig["canId"] = hexBuf;
             sig["startByte"] = s->startByte;
+            if (s->maskLen > 0) {
+                bytesToHexString(s->mask, s->maskLen, hexBuf, sizeof(hexBuf));
+                sig["mask"] = hexBuf;
+            }
             JsonObject states = sig["states"].to<JsonObject>();
             for (int j = 0; j < s->numStates; j++) {
                 bytesToHexString(s->states[j].data, s->states[j].len, hexBuf, sizeof(hexBuf));

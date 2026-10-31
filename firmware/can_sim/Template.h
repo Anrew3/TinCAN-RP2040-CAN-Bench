@@ -60,6 +60,8 @@ struct BackgroundMsgDef {
 // added without firmware changes. Each state writes `len` bytes starting at
 // `startByte`. A SIGNAL:<name>:<n> command with a numeric value writes a
 // single raw byte instead, for continuous controls like backlight.
+// An optional per-byte `mask` limits the write to those bits, so two
+// signals can share a byte (e.g. ignition nibble + headlamp bits).
 struct SignalStateDef {
     char name[16];
     byte data[8];
@@ -70,6 +72,8 @@ struct SignalDef {
     char name[16];
     unsigned long canId;    // must be a frame the runner already transmits
     byte startByte;
+    byte mask[8];           // bits each state may change, per byte
+    byte maskLen;           // 0 = no mask: states overwrite whole bytes
     SignalStateDef states[MAX_SIGNAL_STATES];
     byte numStates;
     byte defaultState;      // index into states, or 0xFF for none

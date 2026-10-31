@@ -76,6 +76,8 @@ private:
         byte startByte;
         byte data[8];
         byte len;
+        byte mask[8];       // copied from the SignalDef
+        byte maskLen;       // 0 = overwrite whole bytes
     };
     SignalOverride sigOverrides[MAX_SIGNALS];
 

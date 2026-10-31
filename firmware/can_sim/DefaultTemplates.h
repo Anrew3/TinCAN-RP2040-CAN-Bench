@@ -33,6 +33,11 @@ static SignalDef* dtSignal(Template* t, const char* name, unsigned long canId, b
     return s;
 }
 
+// Limit a signal's writes to these bits (per byte from startByte)
+static void dtMask(SignalDef* s, const char* hex) {
+    s->maskLen = dtHexBytes(hex, s->mask);
+}
+
 static void dtState(SignalDef* s, const char* name, const char* hex, bool isDefault) {
     if (s->numStates >= MAX_SIGNAL_STATES) return;
     SignalStateDef* st = &s->states[s->numStates];
@@ -49,7 +54,7 @@ void initMustangS550Template(Template* t) {
     // Metadata
     strcpy(t->id, "mustang_s550");
     strcpy(t->name, "Ford Mustang S550");
-    strcpy(t->version, "1.1.0");
+    strcpy(t->version, "1.2.0");
     t->isOfficial = true;
 
     // Buttons - CAN ID 0x81
@@ -266,6 +271,18 @@ void initMustangS550Template(Template* t) {
     SignalDef* head = dtSignal(t, "HEADLIGHTS", 0x3B3, 0);
     dtState(head, "DRL", "40 48", true);   // daytime running lights
     dtState(head, "ON",  "44 88", false);  // headlamps on (night)
+
+    // Ignition / power mode: 0x3B2 B0 high nibble (cluster MCU reader
+    // 0x89716 -> power-mode writer 0x70cd0). 1 Off, 2 Accessory, 4 Run,
+    // 8 Start family; any other value counts as Off. Masked to the nibble
+    // so it composes with HEADLIGHTS on the same byte. Only sent in
+    // BODY:LIGHT mode (0x3B2 is not transmitted in BODY:WAKE).
+    SignalDef* ign = dtSignal(t, "IGNITION", 0x3B2, 0);
+    dtMask(ign, "F0");
+    dtState(ign, "OFF",   "10", false);
+    dtState(ign, "ACC",   "20", false);
+    dtState(ign, "RUN",   "40", true);
+    dtState(ign, "START", "80", false);
 
     // Backlight is continuous (0x00-0x11); named states are shortcuts.
     // No default so the base brightness (0x10) is left untouched.
