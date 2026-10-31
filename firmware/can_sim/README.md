@@ -122,7 +122,9 @@ continuously — `0x3B3` = `41 00 00 00 4C 00 00 00` (via `blinkers.wakeBase`),
 The Ford templates ship: `GEAR`, `HEADLAMP`, `MODE` (DRL/night/hazard),
 `BACKLIGHT`, `DAYNIGHT`, `DOORS`, `ABS`, `TRACTION`. Each signal's `canId` must
 be a frame the template transmits (a gauge, the blinker/body frame, or a
-background message). Example:
+background message). An optional `mask` (hex bytes from `startByte`) limits a
+signal to those bits, so two signals can share a byte — the S550 `IGNITION`
+signal writes only the high nibble of `0x3B2` B0 (`"mask": "F0"`). Example:
 
 ```json
 "signals": [

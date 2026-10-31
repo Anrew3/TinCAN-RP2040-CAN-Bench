@@ -2,9 +2,9 @@
   "$schema": "./schema.json",
   "name": "Ford Mustang S550",
   "id": "mustang_s550",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "author": "TinCAN Community",
-  "description": "CAN bus template for Ford Mustang S550 platform (2015-2023). Includes support for instrument cluster, steering wheel controls, TPMS, and turn signals.",
+  "description": "CAN bus template for Ford Mustang S550 platform (2015-2023). Includes support for instrument cluster, steering wheel controls, gear, ignition/power mode, TPMS, and turn signals. Fuel level is analog on this cluster (fuel-sender wires), not CAN, so there is no fuel gauge.",
 
   "vehicle": {
     "make": "Ford",
@@ -54,17 +54,6 @@
       "max": 200,
       "unit": "mph",
       "intervalMs": 100
-    },
-    "FUEL": {
-      "canId": "0x207",
-      "base": "00 00 00 00 00 00 00 00",
-      "valueBytes": [2],
-      "scale": 2.55,
-      "offset": 0,
-      "min": 0,
-      "max": 100,
-      "unit": "%",
-      "intervalMs": 200
     }
   },
 
@@ -164,6 +153,15 @@
       "default": "DRL",
       "states": { "DRL": "40 48", "ON": "44 88" },
       "description": "0x3B2/3 B0+B1 headlight switch, written as a pair: DRL/daytime (B0=40,B1=48) or headlamps on/night (B0=44,B1=88). Hazard lives in the Turn Signals control (B4/B6)."
+    },
+    {
+      "name": "IGNITION",
+      "canId": "0x3B2",
+      "startByte": 0,
+      "mask": "F0",
+      "default": "RUN",
+      "states": { "OFF": "10", "ACC": "20", "RUN": "40", "START": "80" },
+      "description": "0x3B2 B0 high nibble = cluster power mode (MCU reader 0x89716 -> power-mode writer 0x70cd0): 1 Off, 2 Accessory, 4 Run (gauges live), 8 Start family; any other value counts as Off. Masked to the nibble so it composes with HEADLIGHTS. Only transmitted in BODY:LIGHT mode."
     },
     {
       "name": "BACKLIGHT",

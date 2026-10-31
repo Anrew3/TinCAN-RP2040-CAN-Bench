@@ -1113,6 +1113,11 @@
             justify-content: center;
         }
 
+        /* Gauges the current template doesn't send (e.g. S550 fuel is analog) */
+        .gauge-item.unmapped {
+            opacity: 0.4;
+        }
+
         /* D-pad keys the current template doesn't define */
         .dpad-btn.unmapped {
             opacity: 0.35;
@@ -3163,7 +3168,7 @@
                     </div>
 
                     <!-- Fuel -->
-                    <div class="gauge-item fuel">
+                    <div class="gauge-item fuel" id="fuelGaugeItem">
                         <div class="gauge-label">Fuel</div>
                         <div class="gauge-value-display">
                             <span class="gauge-number" id="fuelValue">75</span>
@@ -4972,6 +4977,11 @@
                 host.appendChild(el);
             });
 
+            const hasFuel = !!template?.gauges?.FUEL;
+            const fuelItem = document.getElementById('fuelGaugeItem');
+            fuelItem.classList.toggle('unmapped', !hasFuel);
+            fuelItem.title = hasFuel ? '' : 'Fuel is not on CAN for this vehicle (analog fuel-sender input)';
+
             const gear = (template?.signals || []).find(sg => sg.name?.toUpperCase() === 'GEAR');
             const hasSport = !!gear?.states && Object.keys(gear.states).some(k => k.toUpperCase() === 'SPORT');
             document.getElementById('gearBtnS').style.display = hasSport ? '' : 'none';
@@ -5380,7 +5390,7 @@
                 const value = parseInt(e.target.value);
                 document.getElementById('fuelValue').textContent = value;
                 document.getElementById('fuelBarFill').style.width = `${value}%`;
-                sendCommand(`FUEL:${value}`);
+                if (templates[currentTemplateId]?.gauges?.FUEL) sendCommand(`FUEL:${value}`);
             });
 
             // D-Pad buttons - now use template

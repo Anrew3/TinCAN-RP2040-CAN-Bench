@@ -87,6 +87,8 @@ void TemplateRunner::applySignalDefaults() {
         sigOverrides[i].startByte = s->startByte;
         sigOverrides[i].len = st->len;
         memcpy(sigOverrides[i].data, st->data, 8);
+        memcpy(sigOverrides[i].mask, s->mask, 8);
+        sigOverrides[i].maskLen = s->maskLen;
     }
 }
 
@@ -96,7 +98,13 @@ void TemplateRunner::applyOverrides(unsigned long canId, byte* data, byte len) {
         if (!o->used || o->canId != canId) continue;
         for (int b = 0; b < o->len; b++) {
             byte idx = o->startByte + b;
-            if (idx < len) data[idx] = o->data[b];
+            if (idx >= len) continue;
+            if (b < o->maskLen) {
+                byte m = o->mask[b];
+                data[idx] = (data[idx] & ~m) | (o->data[b] & m);
+            } else {
+                data[idx] = o->data[b];
+            }
         }
     }
 }
@@ -123,6 +131,8 @@ bool TemplateRunner::setSignal(const char* name, const char* value) {
     SignalOverride* o = &sigOverrides[sigIndex];
     o->canId = s->canId;
     o->startByte = s->startByte;
+    memcpy(o->mask, s->mask, 8);
+    o->maskLen = s->maskLen;
 
     // Named state?
     for (int i = 0; i < s->numStates; i++) {
